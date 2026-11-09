@@ -318,17 +318,12 @@
   </style>
 </head>
 <body>
-  <!-- Header: Estado + Contador de Viewers -->
+  <!-- Header: Contador de Viewers + Acciones -->
   <div class="dock-header">
-    <div class="status-group">
-      <span><span class="dot disconnected" id="kick-dot"></span> Kick</span>
-      <span><span class="dot disconnected" id="tiktok-dot"></span> TikTok</span>
-    </div>
-
     <div class="viewers-box">
-      <div class="v-item kick">🟢 <span id="dock-kick-v">0</span></div>
-      <div class="v-item tiktok">🎵 <span id="dock-tiktok-v">0</span></div>
-      <div class="v-item total"><span class="dot-live"></span> <span id="dock-total-v">0</span></div>
+      <div class="v-item kick" title="Espectadores Kick">🟢 <span id="dock-kick-v">0</span></div>
+      <div class="v-item tiktok" title="Espectadores TikTok">🎵 <span id="dock-tiktok-v">0</span></div>
+      <div class="v-item total" title="Total Espectadores"><span class="dot-live"></span> <span id="dock-total-v">0</span></div>
     </div>
 
     <div class="actions-group">
@@ -336,7 +331,7 @@
       <button class="btn-mode normal" id="btn-dock-sound" onclick="toggleDockSound()" title="Activar o silenciar sonido de alertas en OBS">🔔</button>
       <button class="btn-mode normal" id="btn-slow-mode" onclick="toggleSlowMode()" title="Alternar entre modo normal y modo lento para chats rápidos">⚡ Normal</button>
       <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
-      <span style="font-size: 10px; color: #475569; font-weight: bold; padding: 2px 4px; border-radius: 3px; background: rgba(255,255,255,0.05);" title="Versión de StreamBridge">v1.3</span>
+      <span style="font-size: 10px; color: #475569; font-weight: bold; padding: 2px 4px; border-radius: 3px; background: rgba(255,255,255,0.05);" title="Versión de StreamBridge">v1.4</span>
     </div>
   </div>
 
@@ -532,11 +527,9 @@
       div.className = 'chat-line';
 
       const isKick = msg.platform === 'kick';
-      const badgeText = isKick ? 'KICK' : 'TIKTOK';
       const userClass = isKick ? 'kick' : 'tiktok';
 
       div.innerHTML = `
-        <span class="chat-badge ${msg.platform}">${badgeText}</span>
         <strong class="chat-user ${userClass}">${escapeHtml(msg.user || msg.nickname)}:</strong>
         <span class="chat-text">${formatChatMessage(msg.message)}</span>
       `;

@@ -177,13 +177,11 @@ function addPreviewMessage(msg) {
   item.style.background = 'rgba(255,255,255,0.03)';
   item.style.borderLeft = msg.platform === 'kick' ? '3px solid #53fc18' : '3px solid #fe2c55';
 
-  const badgeColor = msg.platform === 'kick' ? '#53fc18' : '#fe2c55';
-  const badgeText = msg.platform.toUpperCase();
+  const userColor = msg.platform === 'kick' ? '#53fc18' : '#00f2fe';
 
   item.innerHTML = `
-    <span style="font-size: 10px; font-weight: bold; background: ${badgeColor}; color: #000; padding: 2px 4px; border-radius: 3px; margin-right: 6px;">${badgeText}</span>
-    <strong style="color: #cbd5e1;">${escapeHtml(msg.user)}:</strong>
-    <span style="color: #94a3b8;">${formatChatMessage(msg.message)}</span>
+    <strong style="color: ${userColor}; margin-right: 5px;">${escapeHtml(msg.user)}:</strong>
+    <span style="color: #e2e8f0;">${formatChatMessage(msg.message)}</span>
   `;
 
   previewBox.appendChild(item);
