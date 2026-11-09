@@ -39,10 +39,13 @@
           </div>
         </div>
 
-        <div class="input-group">
-          <input type="text" id="kick-user-input" placeholder="Nombre de tu canal en Kick (ej. westcol)">
+        <div class="input-group" style="margin-bottom: 4px;">
+          <input type="text" id="kick-user-input" placeholder="Nombre de canal (ej. westcol) o Chatroom ID (ej. 669512)">
           <button class="btn-kick" id="kick-connect-btn">Conectar</button>
           <button class="btn-danger" id="kick-disconnect-btn" style="display: none;">Desconectar</button>
+        </div>
+        <div style="font-size: 11px; margin-bottom: 8px; color: #94a3b8;">
+          💡 <em>¿Te sale error 403?</em> <a id="kick-id-helper" href="https://kick.com" target="_blank" style="color: #53fc18; text-decoration: underline;">Ver mi Chatroom ID en Kick</a> y pégalo aquí.
         </div>
         <div class="status-message" id="kick-status-msg"></div>
       </div>

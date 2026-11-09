@@ -9,44 +9,80 @@ class KickConnector extends EventEmitter {
     this.chatroomId = null;
     this.channelId = null;
     this.isConnected = false;
-    this.reconnectTimer = null;
     this.pingInterval = null;
     // Current working Kick Pusher credentials
     this.pusherKey = '34bf7a0ff419a2a775b9';
     this.pusherCluster = 'us2';
   }
 
-  async connect(channelSlug) {
-    if (!channelSlug) return false;
+  async connect(channelInput) {
+    if (!channelInput) return false;
     this.disconnect();
-    this.channelSlug = channelSlug.trim().toLowerCase().replace('@', '');
+    
+    const cleanInput = String(channelInput).trim().toLowerCase().replace(/^@/, '');
+    this.channelSlug = cleanInput;
+
+    // Layer 1: If input is already numeric ID, connect directly without hitting kick.com
+    if (/^\d+$/.test(cleanInput)) {
+      this.chatroomId = cleanInput;
+      this.channelId = cleanInput;
+      this.emit('status', {
+        status: 'connecting',
+        message: `Conectando directamente con Chatroom ID: ${this.chatroomId}...`
+      });
+      this._initWebSocket();
+      return true;
+    }
 
     try {
       this.emit('status', { status: 'connecting', message: `Buscando canal de Kick: ${this.channelSlug}...` });
 
-      // Resolve channel details via Kick API v1
-      const res = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'application/json'
+      // Layer 2: Try v2 /chatroom endpoint
+      let resolvedChatroomId = null;
+      let resolvedChannelId = null;
+
+      try {
+        const resV2 = await fetch(`https://kick.com/api/v2/channels/${this.channelSlug}/chatroom`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          }
+        });
+        if (resV2.ok) {
+          const dataV2 = await resV2.json();
+          if (dataV2 && dataV2.id) {
+            resolvedChatroomId = dataV2.id;
+          }
         }
-      });
+      } catch (err) {}
 
-      if (!res.ok) {
-        throw new Error(`Canal no encontrado o error en Kick (HTTP ${res.status})`);
+      // Layer 3: Try v1 /channels endpoint if v2 did not return id
+      if (!resolvedChatroomId) {
+        try {
+          const resV1 = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+              'Accept': 'application/json'
+            }
+          });
+          if (resV1.ok) {
+            const dataV1 = await resV1.json();
+            resolvedChatroomId = dataV1?.chatroom?.id;
+            resolvedChannelId = dataV1?.id;
+          }
+        } catch (err) {}
       }
 
-      const channelData = await res.json();
-      this.chatroomId = channelData?.chatroom?.id;
-      this.channelId = channelData?.id;
-
-      if (!this.chatroomId) {
-        throw new Error('No se encontró el chatroom ID para este canal');
+      if (!resolvedChatroomId) {
+        throw new Error(`Cloudflare bloqueó la búsqueda en la nube. Introduce directamente tu Chatroom ID numérico (ej: 669512).`);
       }
+
+      this.chatroomId = resolvedChatroomId;
+      this.channelId = resolvedChannelId || resolvedChatroomId;
 
       this.emit('status', {
         status: 'connecting',
-        message: `Chatroom encontrado (${this.chatroomId}). Conectando a Pusher...`
+        message: `Chatroom ID encontrado (${this.chatroomId}). Conectando a Pusher...`
       });
 
       this._initWebSocket();
@@ -63,7 +99,6 @@ class KickConnector extends EventEmitter {
     this.ws = new WebSocket(wsUrl);
 
     this.ws.on('open', () => {
-      // Keep alive ping
       this.pingInterval = setInterval(() => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ event: 'pusher:ping', data: {} }));
@@ -75,12 +110,10 @@ class KickConnector extends EventEmitter {
       try {
         const msg = JSON.parse(raw.toString());
         this._handlePusherMessage(msg);
-      } catch (e) {
-        // Ignored
-      }
+      } catch (e) {}
     });
 
-    this.ws.on('close', (code, reason) => {
+    this.ws.on('close', () => {
       this.isConnected = false;
       this._clearIntervals();
       this.emit('status', { status: 'disconnected', message: 'Desconectado de Kick' });
@@ -105,7 +138,7 @@ class KickConnector extends EventEmitter {
         data: { auth: '', channel: `chatrooms.${this.chatroomId}.v2` }
       }));
 
-      // Subscribe to channel events (follows, subscriptions, gifts)
+      // Subscribe to channel events
       if (this.channelId) {
         this.ws.send(JSON.stringify({
           event: 'pusher:subscribe',
@@ -132,7 +165,7 @@ class KickConnector extends EventEmitter {
           userId: chat.sender?.id,
           avatar: chat.sender?.profile_pic || null,
           badges: badges,
-          color: chat.sender?.identity?.color || '#53fc18', // Kick iconic neon green
+          color: chat.sender?.identity?.color || '#53fc18',
           message: chat.content || '',
           timestamp: Date.now()
         };

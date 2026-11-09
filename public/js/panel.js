@@ -2,8 +2,20 @@ const socket = io();
 
 // DOM Elements
 const kickInput = document.getElementById('kick-user-input');
+const kickIdHelper = document.getElementById('kick-id-helper');
 const kickConnectBtn = document.getElementById('kick-connect-btn');
 const kickDisconnectBtn = document.getElementById('kick-disconnect-btn');
+
+kickInput.addEventListener('input', () => {
+  const val = kickInput.value.trim().toLowerCase().replace(/^@/, '');
+  if (val && !/^\d+$/.test(val)) {
+    kickIdHelper.href = `https://kick.com/api/v2/channels/${val}/chatroom`;
+    kickIdHelper.textContent = `Ver Chatroom ID de "${val}"`;
+  } else {
+    kickIdHelper.href = 'https://kick.com';
+    kickIdHelper.textContent = 'Ver mi Chatroom ID en Kick';
+  }
+});
 const kickDot = document.getElementById('kick-status-dot');
 const kickText = document.getElementById('kick-status-text');
 const kickMsg = document.getElementById('kick-status-msg');
