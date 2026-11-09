@@ -2,8 +2,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
+const { saveAudioUpload } = require('./lib/upload');
 const KickConnector = require('./connectors/kick');
 const TikTokConnector = require('./connectors/tiktok');
 
@@ -43,7 +45,10 @@ const state = {
     showAvatars: true,
     alertDuration: 5000,
     alertVolume: 0.8,
-    soundEnabled: true
+    soundEnabled: true,
+    customSoundUrl: '', // URL personalizado (vació = usa predeterminado)
+    slowMode: false,    // Modo lento de chat (false = normal, true = lento)
+    slowModeInterval: 1500 // Intervalo en ms para modo lento
   }
 };
 
@@ -64,9 +69,24 @@ function addAlertToHistory(alert) {
 const kick = new KickConnector();
 const tiktok = new TikTokConnector();
 
-// Route files
+// Middleware y archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// Endpoint para subir sonido personalizado
+app.post('/api/upload-sound', (req, res) => {
+  try {
+    const result = saveAudioUpload(req.body, path.join(__dirname, 'public', 'uploads'));
+    if (result.error) return res.status(result.status || 400).json({ ok: false, error: result.error });
+    state.settings.customSoundUrl = result.url;
+    io.emit('settings:update', state.settings);
+    res.json({ ok: true, url: result.url });
+  } catch (err) {
+    console.error('Error subiendo audio:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // Routes shortcuts
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat.html')));

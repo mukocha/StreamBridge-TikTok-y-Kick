@@ -21,13 +21,31 @@ socket.on('settings:update', (newSettings) => {
   applySettings(newSettings);
 });
 
+let slowQueue = [];
+let slowTimer = null;
+
 socket.on('chat:message', (msg) => {
-  addMessage(msg, true);
+  if (settings.slowMode) {
+    slowQueue.push(msg);
+    if (slowQueue.length > 50) slowQueue.shift();
+  } else {
+    addMessage(msg, true);
+  }
 });
 
 function applySettings(newSettings) {
   settings = { ...settings, ...newSettings };
   document.documentElement.style.setProperty('--font-size', `${settings.fontSize}px`);
+
+  if (settings.slowMode && !slowTimer) {
+    slowTimer = setInterval(() => {
+      if (slowQueue.length > 0) addMessage(slowQueue.shift(), true);
+    }, settings.slowModeInterval || 1500);
+  } else if (!settings.slowMode && slowTimer) {
+    clearInterval(slowTimer);
+    slowTimer = null;
+    while (slowQueue.length > 0) addMessage(slowQueue.shift(), true);
+  }
 }
 
 function formatChatMessage(text) {

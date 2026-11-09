@@ -85,6 +85,33 @@
       50% { opacity: 0.5; transform: scale(1.2); }
     }
 
+    .actions-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-mode {
+      background: #18223a;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-mode.normal {
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+    .btn-mode.slow {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #fbbf24;
+    }
+
     .btn-clear {
       background: #1e2230;
       color: #94a3b8;
@@ -227,7 +254,10 @@
       <div class="v-item total"><span class="dot-live"></span> <span id="dock-total-v">0</span></div>
     </div>
 
-    <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
+    <div class="actions-group">
+      <button class="btn-mode normal" id="btn-slow-mode" onclick="toggleSlowMode()" title="Alternar entre modo normal y modo lento para chats rápidos">⚡ Normal</button>
+      <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
+    </div>
   </div>
 
   <!-- Feed unificado de Chat y Alertas -->
@@ -242,6 +272,38 @@
     const dockTotalV = document.getElementById('dock-total-v');
 
     let isAutoScroll = true;
+    let slowMode = false;
+    let slowQueue = [];
+    let slowTimer = null;
+
+    function setSlowMode(enabled) {
+      slowMode = Boolean(enabled);
+      const btn = document.getElementById('btn-slow-mode');
+      if (btn) {
+        btn.textContent = slowMode ? '⏳ Lento (1.5s)' : '⚡ Normal';
+        btn.className = slowMode ? 'btn-mode slow' : 'btn-mode normal';
+      }
+      if (slowMode && !slowTimer) {
+        slowTimer = setInterval(() => {
+          if (slowQueue.length > 0) {
+            renderChatMessage(slowQueue.shift());
+          }
+        }, 1500);
+      } else if (!slowMode && slowTimer) {
+        clearInterval(slowTimer);
+        slowTimer = null;
+        while (slowQueue.length > 0) {
+          renderChatMessage(slowQueue.shift());
+        }
+      }
+    }
+
+    function toggleSlowMode() {
+      const next = !slowMode;
+      setSlowMode(next);
+      socket.emit('settings:update', { slowMode: next });
+    }
+
     feed.addEventListener('scroll', () => {
       const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 60;
       isAutoScroll = nearBottom;
@@ -278,8 +340,16 @@
       });
     }
 
-    // 1. Mensaje de Chat Minimalista (Solo badge, nombre y texto)
     function addChatMessage(msg) {
+      if (slowMode) {
+        slowQueue.push(msg);
+        if (slowQueue.length > 50) slowQueue.shift(); // Evitar desbordamiento
+      } else {
+        renderChatMessage(msg);
+      }
+    }
+
+    function renderChatMessage(msg) {
       const div = document.createElement('div');
       div.className = 'chat-line';
 
@@ -341,6 +411,9 @@
       updateDockStatus('kick', state.kick.status);
       updateDockStatus('tiktok', state.tiktok.status);
       if (state.viewers) updateDockViewers(state.viewers);
+      if (state.settings && state.settings.slowMode !== undefined) {
+        setSlowMode(state.settings.slowMode);
+      }
 
       // Combinar y ordenar mensajes y alertas por fecha para mostrar historial cronológico
       const combined = [];
@@ -364,6 +437,12 @@
 
     socket.on('viewers:update', (v) => {
       updateDockViewers(v);
+    });
+
+    socket.on('settings:update', (settings) => {
+      if (settings && settings.slowMode !== undefined) {
+        setSlowMode(settings.slowMode);
+      }
     });
 
     socket.on('chat:message', (msg) => {

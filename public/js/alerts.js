@@ -47,9 +47,32 @@ function processQueue() {
   showAlert(current);
 }
 
-// Built-in Sound Synthesizer using Web Audio API
+let currentAudio = null;
+
+// Sonido: Si hay URL personalizado lo reproduce; de lo contrario usa el sonido predeterminado
 function playAlertSound() {
   if (!settings.soundEnabled) return;
+  try {
+    if (settings.customSoundUrl) {
+      if (currentAudio) {
+        try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (_) {}
+      }
+      currentAudio = new Audio(settings.customSoundUrl);
+      currentAudio.volume = Math.max(0, Math.min(1, settings.alertVolume !== undefined ? settings.alertVolume : 0.8));
+      currentAudio.play().catch(e => {
+        console.warn('Audio personalizado falló, usando predeterminado:', e);
+        playDefaultSynthesizedChime();
+      });
+    } else {
+      playDefaultSynthesizedChime();
+    }
+  } catch (_) {
+    playDefaultSynthesizedChime();
+  }
+}
+
+// Sonido Predeterminado Sintetizado con Web Audio API (Campana armónica)
+function playDefaultSynthesizedChime() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
@@ -65,7 +88,8 @@ function playAlertSound() {
     osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.24); // G5
     osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.36); // C6
 
-    gain.gain.setValueAtTime(settings.alertVolume * 0.4, now);
+    const vol = settings.alertVolume !== undefined ? settings.alertVolume : 0.8;
+    gain.gain.setValueAtTime(vol * 0.4, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
 
     osc.connect(gain);

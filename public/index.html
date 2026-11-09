@@ -119,6 +119,67 @@
       </div>
     </div>
 
+    <!-- Audio & Chat Speed Settings -->
+    <div class="card obs-section">
+      <div class="card-header">
+        <div class="platform-title">
+          <span>⚙️ Configuración de Sonido & Velocidad de Chat</span>
+        </div>
+        <span style="font-size: 12px; color: var(--text-secondary);">Se aplica a OBS y al Panel Dock en tiempo real</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Sonido de Alertas -->
+        <div>
+          <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">🔊 Sonido de las Alertas</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="btn-secondary" id="btn-sound-default" style="font-size: 12px; background: #3b82f6; color: #fff;" onclick="selectSoundMode('default')">🔔 Sonido Predeterminado</button>
+            <button class="btn-secondary" id="btn-sound-custom" style="font-size: 12px;" onclick="selectSoundMode('custom')">🎵 Personalizado</button>
+          </div>
+
+          <div id="custom-sound-box" style="display: none; background: #090e18; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">URL o Archivo de Audio (MP3 / WAV):</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+              <input type="text" id="sound-url-input" placeholder="https://ejemplo.com/misonido.mp3" style="font-size: 12px; padding: 6px 10px;">
+              <button class="btn-secondary" style="font-size: 12px;" onclick="saveCustomSoundUrl()">Guardar</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="file" id="sound-file-input" accept="audio/*" style="display: none;" onchange="handleAudioUpload(event)">
+              <button class="btn-secondary" style="font-size: 12px;" onclick="document.getElementById('sound-file-input').click()">📁 Subir archivo desde PC</button>
+              <span id="sound-file-status" style="font-size: 11px; color: #94a3b8;"></span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+            <button class="btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="testCurrentSound()">▶️ Probar Sonido</button>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+              <span>Volumen:</span>
+              <input type="range" id="sound-volume-slider" min="0" max="100" value="80" style="width: 100px; accent-color: #3b82f6;" onchange="updateSoundVolume(this.value)">
+              <span id="sound-volume-label">80%</span>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+            💡 <em>Comentarios, likes acumulados y espectadores entrando son silenciosos para no saturar tu stream.</em>
+          </div>
+        </div>
+
+        <!-- Velocidad de Chat (Modo Lento / Normal) -->
+        <div>
+          <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">⏳ Velocidad del Chat (Dock y Pantalla)</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+            Elige si los mensajes aparecen al instante o pausadamente para chats rápidos con muchos espectadores.
+          </div>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button class="btn-secondary" id="btn-panel-mode-normal" style="font-size: 12px; background: #3b82f6; color: #fff;" onclick="setPanelChatMode(false)">⚡ Modo Normal (Instantáneo)</button>
+            <button class="btn-secondary" id="btn-panel-mode-slow" style="font-size: 12px;" onclick="setPanelChatMode(true)">⏳ Modo Lento (1.5 seg)</button>
+          </div>
+          <div style="font-size: 11px; color: #64748b;">
+            💡 <em>También puedes alternar el Modo Lento con 1 clic directamente desde la cabecera de tu Dock en OBS.</em>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Testing & Preview Grid -->
     <div class="dashboard-grid">
       <!-- Simulator Buttons -->

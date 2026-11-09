@@ -58,6 +58,9 @@ socket.on('init', ({ state, recentMessages }) => {
   if (state.viewers) {
     updatePanelViewers(state.viewers);
   }
+  if (state.settings) {
+    applySettingsUI(state.settings);
+  }
   if (state.kick) {
     kickInput.value = state.kick.user || '';
     updateKickHelperLink();
@@ -71,6 +74,10 @@ socket.on('init', ({ state, recentMessages }) => {
     previewBox.innerHTML = '';
     recentMessages.forEach(addPreviewMessage);
   }
+});
+
+socket.on('settings:update', (newSettings) => {
+  applySettingsUI(newSettings);
 });
 
 socket.on('status:update', (data) => {
@@ -204,4 +211,171 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// -------------------------------------------------------------
+// Configuracion de Sonido de Alertas y Velocidad de Chat
+// -------------------------------------------------------------
+let currentSettings = {
+  customSoundUrl: '',
+  alertVolume: 0.8,
+  slowMode: false
+};
+
+function applySettingsUI(s) {
+  if (!s) return;
+  currentSettings = { ...currentSettings, ...s };
+
+  // Sonido
+  const isCustom = Boolean(currentSettings.customSoundUrl);
+  const btnDef = document.getElementById('btn-sound-default');
+  const btnCust = document.getElementById('btn-sound-custom');
+  const customBox = document.getElementById('custom-sound-box');
+  const soundUrlInput = document.getElementById('sound-url-input');
+
+  if (btnDef && btnCust && customBox) {
+    if (isCustom) {
+      btnCust.style.background = '#3b82f6';
+      btnCust.style.color = '#fff';
+      btnDef.style.background = '#334155';
+      btnDef.style.color = '#f1f5f9';
+      customBox.style.display = 'block';
+      if (soundUrlInput) soundUrlInput.value = currentSettings.customSoundUrl;
+    } else {
+      btnDef.style.background = '#3b82f6';
+      btnDef.style.color = '#fff';
+      btnCust.style.background = '#334155';
+      btnCust.style.color = '#f1f5f9';
+      customBox.style.display = 'none';
+    }
+  }
+
+  // Volumen
+  const slider = document.getElementById('sound-volume-slider');
+  const label = document.getElementById('sound-volume-label');
+  if (slider && currentSettings.alertVolume !== undefined) {
+    const pct = Math.round(currentSettings.alertVolume * 100);
+    slider.value = pct;
+    if (label) label.textContent = `${pct}%`;
+  }
+
+  // Modo Lento
+  const btnNorm = document.getElementById('btn-panel-mode-normal');
+  const btnSlow = document.getElementById('btn-panel-mode-slow');
+  if (btnNorm && btnSlow) {
+    if (currentSettings.slowMode) {
+      btnSlow.style.background = '#f59e0b';
+      btnSlow.style.color = '#000';
+      btnNorm.style.background = '#334155';
+      btnNorm.style.color = '#f1f5f9';
+    } else {
+      btnNorm.style.background = '#3b82f6';
+      btnNorm.style.color = '#fff';
+      btnSlow.style.background = '#334155';
+      btnSlow.style.color = '#f1f5f9';
+    }
+  }
+}
+
+function selectSoundMode(mode) {
+  if (mode === 'default') {
+    currentSettings.customSoundUrl = '';
+    socket.emit('settings:update', { customSoundUrl: '' });
+    applySettingsUI({ customSoundUrl: '' });
+    showToast('Sonido predeterminado activado');
+  } else {
+    document.getElementById('custom-sound-box').style.display = 'block';
+    const btnCust = document.getElementById('btn-sound-custom');
+    const btnDef = document.getElementById('btn-sound-default');
+    btnCust.style.background = '#3b82f6';
+    btnCust.style.color = '#fff';
+    btnDef.style.background = '#334155';
+    btnDef.style.color = '#f1f5f9';
+  }
+}
+
+function saveCustomSoundUrl() {
+  const url = document.getElementById('sound-url-input').value.trim();
+  if (!url) return alert('Por favor introduce la URL de tu audio');
+  socket.emit('settings:update', { customSoundUrl: url });
+  showToast('Sonido personalizado guardado');
+}
+
+function handleAudioUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('sound-file-status');
+  statusEl.textContent = 'Subiendo audio...';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const res = await fetch('/api/upload-sound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: e.target.result })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('sound-url-input').value = data.url;
+        statusEl.textContent = '✅ Subido con éxito!';
+        showToast('Sonido subido y activado');
+      } else {
+        statusEl.textContent = '❌ Error: ' + data.error;
+      }
+    } catch (err) {
+      statusEl.textContent = '❌ Error de red';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateSoundVolume(val) {
+  const vol = Number(val) / 100;
+  document.getElementById('sound-volume-label').textContent = `${val}%`;
+  socket.emit('settings:update', { alertVolume: vol });
+}
+
+function setPanelChatMode(slowMode) {
+  socket.emit('settings:update', { slowMode: Boolean(slowMode) });
+  showToast(slowMode ? 'Modo lento activado (1.5s)' : 'Modo normal activado');
+}
+
+function testCurrentSound() {
+  const slider = document.getElementById('sound-volume-slider');
+  const vol = (slider ? Number(slider.value) : 80) / 100;
+  const url = document.getElementById('sound-url-input')?.value.trim();
+
+  if (url) {
+    const a = new Audio(url);
+    a.volume = Math.max(0, Math.min(1, vol));
+    a.play().catch(() => playDefaultChime(vol));
+  } else {
+    playDefaultChime(vol);
+  }
+}
+
+function playDefaultChime(vol) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(523.25, now);
+    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.24);
+    osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.36);
+
+    gain.gain.setValueAtTime(vol * 0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.9);
+  } catch (_) {}
 }
