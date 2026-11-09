@@ -1,5 +1,26 @@
 const WebSocket = require('ws');
 const EventEmitter = require('events');
+const { execFile } = require('child_process');
+
+function fetchWithCurl(url) {
+  const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+  return new Promise((resolve, reject) => {
+    execFile(curlCmd, [
+      '-s', '-L', '--max-time', '8',
+      url,
+      '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      '-H', 'Accept: application/json'
+    ], (err, stdout) => {
+      if (!err && stdout) {
+        try {
+          const parsed = JSON.parse(stdout);
+          if (parsed) return resolve(parsed);
+        } catch (_) {}
+      }
+      reject(err || new Error('curl empty response'));
+    });
+  });
+}
 
 class KickConnector extends EventEmitter {
   constructor() {
@@ -58,26 +79,45 @@ class KickConnector extends EventEmitter {
     try {
       this.emit('status', { status: 'connecting', message: `Buscando canal de Kick: ${this.channelSlug}...` });
 
-      // Layer 2: Try v2 /chatroom endpoint
+      // Layer 2: Try curl (bypasses Cloudflare on Alpine / Railway)
       let resolvedChatroomId = null;
       let resolvedChannelId = null;
 
       try {
-        const resV2 = await fetch(`https://kick.com/api/v2/channels/${this.channelSlug}/chatroom`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json'
-          }
-        });
-        if (resV2.ok) {
-          const dataV2 = await resV2.json();
-          if (dataV2 && dataV2.id) {
-            resolvedChatroomId = dataV2.id;
-          }
+        const curlV2 = await fetchWithCurl(`https://kick.com/api/v2/channels/${this.channelSlug}/chatroom`);
+        if (curlV2 && curlV2.id) {
+          resolvedChatroomId = curlV2.id;
         }
-      } catch (err) {}
+      } catch (_) {}
 
-      // Layer 3: Try v1 /channels endpoint if v2 did not return id
+      if (!resolvedChatroomId) {
+        try {
+          const curlV1 = await fetchWithCurl(`https://kick.com/api/v1/channels/${this.channelSlug}`);
+          if (curlV1 && (curlV1.chatroom?.id || curlV1.id)) {
+            resolvedChatroomId = curlV1.chatroom?.id || curlV1.id;
+            resolvedChannelId = curlV1.id;
+          }
+        } catch (_) {}
+      }
+
+      // Layer 3: Try native fetch if curl did not succeed
+      if (!resolvedChatroomId) {
+        try {
+          const resV2 = await fetch(`https://kick.com/api/v2/channels/${this.channelSlug}/chatroom`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+              'Accept': 'application/json'
+            }
+          });
+          if (resV2.ok) {
+            const dataV2 = await resV2.json();
+            if (dataV2 && dataV2.id) {
+              resolvedChatroomId = dataV2.id;
+            }
+          }
+        } catch (err) {}
+      }
+
       if (!resolvedChatroomId) {
         try {
           const resV1 = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
@@ -95,7 +135,7 @@ class KickConnector extends EventEmitter {
       }
 
       if (!resolvedChatroomId) {
-        throw new Error(`Cloudflare bloqueó la búsqueda en la nube. Introduce directamente tu Chatroom ID numérico (ej: 669512).`);
+        throw new Error(`Cloudflare bloqueó la búsqueda automática. Abre el enlace "Ver Chatroom ID" abajo, copia el número y pégalo aquí.`);
       }
 
       this.chatroomId = resolvedChatroomId;

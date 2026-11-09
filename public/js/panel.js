@@ -6,16 +6,19 @@ const kickIdHelper = document.getElementById('kick-id-helper');
 const kickConnectBtn = document.getElementById('kick-connect-btn');
 const kickDisconnectBtn = document.getElementById('kick-disconnect-btn');
 
-kickInput.addEventListener('input', () => {
+function updateKickHelperLink() {
   const val = kickInput.value.trim().toLowerCase().replace(/^@/, '');
   if (val && !/^\d+$/.test(val)) {
-    kickIdHelper.href = `https://kick.com/api/v2/channels/${val}/chatroom`;
+    kickIdHelper.href = `https://kick.com/api/v1/channels/${val}`;
     kickIdHelper.textContent = `Ver Chatroom ID de "${val}"`;
   } else {
     kickIdHelper.href = 'https://kick.com';
     kickIdHelper.textContent = 'Ver mi Chatroom ID en Kick';
   }
-});
+}
+
+kickInput.addEventListener('input', updateKickHelperLink);
+updateKickHelperLink();
 const kickDot = document.getElementById('kick-status-dot');
 const kickText = document.getElementById('kick-status-text');
 const kickMsg = document.getElementById('kick-status-msg');
@@ -57,6 +60,7 @@ socket.on('init', ({ state, recentMessages }) => {
   }
   if (state.kick) {
     kickInput.value = state.kick.user || '';
+    updateKickHelperLink();
     updatePlatformUI('kick', state.kick.status, state.kick.message);
   }
   if (state.tiktok) {
