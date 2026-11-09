@@ -76,10 +76,13 @@
   <div class="dock-header">
     <div class="status-group">
       <span class="pill" id="kick-dock-status">
-        <span class="dot disconnected" id="kick-dot"></span> Kick
+        <span class="dot disconnected" id="kick-dot"></span> Kick (<span id="dock-kick-v">0</span>)
       </span>
       <span class="pill" id="tiktok-dock-status">
-        <span class="dot disconnected" id="tiktok-dot"></span> TikTok
+        <span class="dot disconnected" id="tiktok-dot"></span> TikTok (<span id="dock-tiktok-v">0</span>)
+      </span>
+      <span class="pill" style="color: #fff; font-weight: bold; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 8px;">
+        👥 <span id="dock-total-v">0</span>
       </span>
     </div>
     <button class="btn-clear" onclick="clearDockChat()">Limpiar</button>
@@ -87,12 +90,27 @@
   <div id="chat-container"></div>
   <script src="/js/chat.js"></script>
   <script>
+    const dockKickV = document.getElementById('dock-kick-v');
+    const dockTikTokV = document.getElementById('dock-tiktok-v');
+    const dockTotalV = document.getElementById('dock-total-v');
+
+    function updateDockViewers(v) {
+      if (!v) return;
+      if (dockKickV) dockKickV.textContent = (v.kick || 0).toLocaleString();
+      if (dockTikTokV) dockTikTokV.textContent = (v.tiktok || 0).toLocaleString();
+      if (dockTotalV) dockTotalV.textContent = (v.total || 0).toLocaleString();
+    }
+
     socket.on('init', ({ state }) => {
       updateDockStatus('kick', state.kick.status);
       updateDockStatus('tiktok', state.tiktok.status);
+      if (state.viewers) updateDockViewers(state.viewers);
     });
     socket.on('status:update', (data) => {
       updateDockStatus(data.platform, data.status);
+    });
+    socket.on('viewers:update', (v) => {
+      updateDockViewers(v);
     });
     function updateDockStatus(platform, status) {
       const dot = document.getElementById(`${platform}-dot`);

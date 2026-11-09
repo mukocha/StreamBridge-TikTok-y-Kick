@@ -30,6 +30,11 @@ const state = {
     status: 'disconnected',
     message: 'No conectado'
   },
+  viewers: {
+    kick: 0,
+    tiktok: 0,
+    total: 0
+  },
   settings: {
     theme: 'modern-dark',
     fontSize: 16,
@@ -58,6 +63,7 @@ app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat
 app.get('/alerts', (req, res) => res.sendFile(path.join(__dirname, 'public', 'alerts.html')));
 app.get('/dock', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dock.html')));
 app.get('/panel', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/viewers', (req, res) => res.sendFile(path.join(__dirname, 'public', 'viewers.html')));
 
 // Kick events
 kick.on('status', (info) => {
@@ -75,6 +81,12 @@ kick.on('alert', (alert) => {
   io.emit('alert:event', alert);
 });
 
+kick.on('viewers', ({ viewers }) => {
+  state.viewers.kick = viewers;
+  state.viewers.total = (state.viewers.kick || 0) + (state.viewers.tiktok || 0);
+  io.emit('viewers:update', state.viewers);
+});
+
 // TikTok events
 tiktok.on('status', (info) => {
   state.tiktok.status = info.status;
@@ -89,6 +101,12 @@ tiktok.on('chat', (message) => {
 
 tiktok.on('alert', (alert) => {
   io.emit('alert:event', alert);
+});
+
+tiktok.on('viewers', ({ viewers }) => {
+  state.viewers.tiktok = viewers;
+  state.viewers.total = (state.viewers.kick || 0) + (state.viewers.tiktok || 0);
+  io.emit('viewers:update', state.viewers);
 });
 
 function addRecentMessage(msg) {

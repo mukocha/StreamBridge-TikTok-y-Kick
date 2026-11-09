@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>OBS Viewers Overlay</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: transparent;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 10px;
+    }
+
+    .viewers-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .platform-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .platform-pill.kick {
+      color: #53fc18;
+    }
+
+    .platform-pill.tiktok {
+      color: #fe2c55;
+    }
+
+    .platform-pill.total {
+      color: #ffffff;
+      padding-left: 10px;
+      border-left: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .dot-live {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: pulseDot 1.5s infinite;
+      display: inline-block;
+    }
+
+    .count-number {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .icon-svg {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewers-wrapper">
+    <div class="platform-pill kick">
+      <span class="icon-svg">🟢</span>
+      <span>Kick:</span>
+      <span class="count-number" id="count-kick">0</span>
+    </div>
+
+    <div class="platform-pill tiktok">
+      <span class="icon-svg">🎵</span>
+      <span>TikTok:</span>
+      <span class="count-number" id="count-tiktok">0</span>
+    </div>
+
+    <div class="platform-pill total">
+      <span class="dot-live"></span>
+      <span>Total:</span>
+      <span class="count-number" id="count-total">0</span>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    const countKick = document.getElementById('count-kick');
+    const countTikTok = document.getElementById('count-tiktok');
+    const countTotal = document.getElementById('count-total');
+
+    socket.on('init', ({ state }) => {
+      if (state.viewers) {
+        updateViewers(state.viewers);
+      }
+    });
+
+    socket.on('viewers:update', (viewers) => {
+      updateViewers(viewers);
+    });
+
+    function updateViewers(v) {
+      animateNumber(countKick, v.kick || 0);
+      animateNumber(countTikTok, v.tiktok || 0);
+      animateNumber(countTotal, v.total || 0);
+    }
+
+    function animateNumber(element, target) {
+      const current = parseInt(element.textContent, 10) || 0;
+      if (current === target) return;
+      element.textContent = target.toLocaleString();
+    }
+  </script>
+</body>
+</html>

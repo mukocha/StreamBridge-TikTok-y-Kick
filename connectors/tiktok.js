@@ -1,5 +1,14 @@
 const EventEmitter = require('events');
-const { TikTokLiveConnection } = require('tiktok-live-connector');
+const { TikTokLiveConnection, RouteConfig } = require('tiktok-live-connector');
+
+// Parchear las rutas de EulerStream que requieren plan de pago
+// Esto hace que la conexión funcione sin API Key desde cualquier servidor
+RouteConfig.fetchRoomGifts = async () => [];
+RouteConfig.fetchRoomGiftsFromProvider = async () => ({ data: { gifts: [] } });
+RouteConfig.fetchWebcastSignatureFromProvider = async () => ({
+  status: 200,
+  response: {}
+});
 
 class TikTokConnector extends EventEmitter {
   constructor() {
@@ -7,9 +16,10 @@ class TikTokConnector extends EventEmitter {
     this.connection = null;
     this.username = null;
     this.isConnected = false;
+    this.viewers = 0;
   }
 
-  async connect(username, options = {}) {
+  async connect(username) {
     if (!username) return false;
     this.disconnect();
 
@@ -17,51 +27,93 @@ class TikTokConnector extends EventEmitter {
     this.emit('status', { status: 'connecting', message: `Conectando a TikTok Live: @${this.username}...` });
 
     try {
-      const signApiKey = options.signApiKey || process.env.TIKTOK_SIGN_API_KEY || undefined;
-      
-      const connOptions = {
+      this.connection = new TikTokLiveConnection(this.username, {
         processInitialData: false,
-        enableExtendedGiftInfo: true,
-        requestPollingIntervalMs: 1500,
-        ...options
-      };
-
-      if (signApiKey) {
-        connOptions.signApiKey = signApiKey;
-      }
-
-      this.connection = new TikTokLiveConnection(this.username, connOptions);
-
-      this.connection.on('connected', (state) => {
-        this.isConnected = true;
-        this.emit('status', {
-          status: 'connected',
-          message: `Conectado a TikTok Live (@${this.username})`,
-          roomId: state.roomId
-        });
+        fetchRoomInfoOnConnect: false,
+        enableExtendedGiftInfo: false,
+        enableWebsocketUpgrade: true,
+        requestPollingIntervalMs: 2000
       });
 
-      this.connection.on('disconnected', (reason) => {
+      // Verificar si está en vivo antes de conectar
+      let roomId = undefined;
+      try {
+        const roomCheck = await this._fetchRoomData(this.connection, this.username);
+        if (roomCheck) {
+          if (!roomCheck.isLive) {
+            throw Object.assign(new Error("El usuario no está en directo"), { name: 'UserOfflineError' });
+          }
+          roomId = roomCheck.roomId;
+        } else {
+          const isLive = await this.connection.fetchIsLive().catch(() => false);
+          if (!isLive) {
+            throw Object.assign(new Error("El usuario no está en directo"), { name: 'UserOfflineError' });
+          }
+        }
+      } catch (checkErr) {
+        if (checkErr.name === 'UserOfflineError') throw checkErr;
+        // Si falla la verificación, intentar conectar de todas formas
+      }
+
+      // Escuchar errores para evitar que tumben el proceso Node.js
+      this.connection.on('error', (err) => {
+        console.warn(`[TikTok Warning] (@${this.username}):`, err?.info || err?.message || err);
+      });
+
+      this.connection.on('connected', () => {
+        this.isConnected = true;
+        console.log(`[TikTok] 🔴 ¡EN VIVO! Conectado a @${this.username}`);
+        this.emit('status', {
+          status: 'connected',
+          message: `Conectado a TikTok Live (@${this.username})`
+        });
+        if (roomCheck && roomCheck.viewers !== undefined) {
+          this.viewers = roomCheck.viewers;
+          this.emit('viewers', { platform: 'tiktok', viewers: this.viewers });
+        }
+      });
+
+      // Actualización de espectadores en tiempo real de TikTok
+      this.connection.on('roomUser', (data) => {
+        if (data && data.viewerCount !== undefined) {
+          this.viewers = Number(data.viewerCount) || 0;
+          this.emit('viewers', { platform: 'tiktok', viewers: this.viewers });
+        }
+      });
+
+      this.connection.on('disconnected', () => {
         this.isConnected = false;
-        this.emit('status', { status: 'disconnected', message: `Desconectado de TikTok: ${reason || ''}` });
+        this.viewers = 0;
+        this.emit('viewers', { platform: 'tiktok', viewers: 0 });
+        this.emit('status', { status: 'disconnected', message: `Desconectado de TikTok` });
       });
 
       this.connection.on('streamEnd', () => {
         this.isConnected = false;
+        this.viewers = 0;
+        this.emit('viewers', { platform: 'tiktok', viewers: 0 });
         this.emit('status', { status: 'offline', message: `El directo de TikTok ha finalizado` });
       });
 
       // Chat Messages
       this.connection.on('chat', (data) => {
+        const user = data.user || {};
+        const uniqueId = user.uniqueId || user.displayId || data.uniqueId || 'tiktok_user';
+        const nickname = user.nickname || data.nickname || uniqueId;
+        const message = (data.content || data.comment || '').trim();
+        if (!message) return;
+
+        const avatar = user.profilePicture?.urls?.[0] || data.profilePictureUrl || '';
+
         const normalizedMessage = {
-          id: data.msgId || String(Date.now() + Math.random()),
+          id: data.common?.msgId || data.msgId || String(Date.now() + Math.random()),
           platform: 'tiktok',
-          user: data.nickname || data.uniqueId || 'Anónimo',
-          uniqueId: data.uniqueId,
-          avatar: data.profilePictureUrl || null,
-          badges: data.userBadges ? data.userBadges.map(b => b.name || b.type).filter(Boolean) : [],
-          color: '#fe2c55', // TikTok iconic magenta/red
-          message: data.comment || '',
+          user: nickname,
+          uniqueId: uniqueId,
+          avatar: avatar || null,
+          badges: (user.badgeList || data.userBadges || []).map(b => b.name || b.type).filter(Boolean),
+          color: '#fe2c55',
+          message: message,
           timestamp: Date.now()
         };
         this.emit('chat', normalizedMessage);
@@ -69,23 +121,26 @@ class TikTokConnector extends EventEmitter {
 
       // Gifts
       this.connection.on('gift', (data) => {
-        // Only trigger alert on streak finish or non-streak gifts (repeatEnd or repeatCount)
-        if (data.giftType === 1 && !data.repeatEnd) {
-          // Streak gift in progress, still counting
-          return;
-        }
+        if (data.giftType === 1 && !data.repeatEnd) return;
 
-        const count = data.repeatCount || 1;
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Alguien';
+        const giftName = data.giftDetails?.giftName || data.giftName || (data.gift && data.gift.name) || 'Regalo';
+        const count = Number(data.repeatCount || 1);
+        const diamondCount = Number(data.diamondCount || data.giftDetails?.diamondCount || 1);
+        const totalDiamonds = diamondCount * count;
+        const icon = data.giftPictureUrl || data.giftDetails?.giftImage?.url?.[0] || '';
+
         const normalizedAlert = {
           id: 'tiktok-gift-' + Date.now(),
           platform: 'tiktok',
           type: 'gift',
-          user: data.nickname || data.uniqueId || 'Anónimo',
-          giftName: data.giftName || 'Regalo',
+          user: username,
+          giftName: giftName,
           count: count,
-          diamonds: (data.diamondCount || 1) * count,
-          giftIcon: data.giftPictureUrl || null,
-          details: `¡Envió ${data.giftName || 'Regalo'} x${count}!`,
+          diamonds: totalDiamonds,
+          giftIcon: icon || null,
+          details: `¡Envió ${giftName} x${count} (${totalDiamonds} 🪙)!`,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
@@ -93,11 +148,13 @@ class TikTokConnector extends EventEmitter {
 
       // Followers
       this.connection.on('follow', (data) => {
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Nuevo seguidor';
         const normalizedAlert = {
           id: 'tiktok-follow-' + Date.now(),
           platform: 'tiktok',
           type: 'follow',
-          user: data.nickname || data.uniqueId || 'Nuevo seguidor',
+          user: username,
           details: `¡Comenzó a seguirte en TikTok!`,
           timestamp: Date.now()
         };
@@ -106,36 +163,67 @@ class TikTokConnector extends EventEmitter {
 
       // Shares
       this.connection.on('share', (data) => {
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Espectador';
         const normalizedAlert = {
           id: 'tiktok-share-' + Date.now(),
           platform: 'tiktok',
           type: 'share',
-          user: data.nickname || data.uniqueId || 'Espectador',
+          user: username,
           details: `¡Compartió el directo de TikTok!`,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       });
 
-      // Connect to TikTok Live
-      await this.connection.connect();
+      // Connect
+      await this.connection.connect(roomId);
       return true;
     } catch (err) {
       console.error('[TIKTOK] Error al conectar:', err.message);
       this.isConnected = false;
+
+      const isOffline = (err.name === 'UserOfflineError') ||
+        (err.message && (err.message.includes("isn't online") || err.message.includes('offline') || err.message.includes('no está en directo')));
+
       this.emit('status', {
         status: 'error',
-        message: err.message.includes('LIVE has ended') || err.message.includes('offline')
-          ? `El usuario @${this.username} no está en directo en este momento.`
+        message: isOffline
+          ? `@${this.username} no está en directo en este momento.`
           : `Error TikTok: ${err.message}`
       });
       return false;
     }
   }
 
+  async _fetchRoomData(connector, username) {
+    try {
+      const cleanUser = (username || '').trim().replace(/^@/, '');
+      if (!cleanUser || !connector?.webClient) return null;
+      const roomData = await connector.webClient.getJsonObjectFromTikTokApi('api-live/user/room/', {
+        ...connector.webClient.clientParams,
+        uniqueId: cleanUser,
+        sourceType: '54'
+      });
+      const liveRoom = roomData?.data?.liveRoom;
+      if (liveRoom && liveRoom.status !== undefined) {
+        const status = Number(liveRoom.status);
+        const viewers = Number(liveRoom.liveRoomStats?.userCount ?? liveRoom.user_count ?? 0) || 0;
+        return {
+          isLive: status === 2,
+          status,
+          viewers,
+          roomId: roomData?.data?.user?.roomId || liveRoom.roomId || ''
+        };
+      }
+    } catch (_) {}
+    return null;
+  }
+
   disconnect() {
     if (this.connection) {
       try {
+        this.connection.removeAllListeners();
         this.connection.disconnect();
       } catch (e) {}
       this.connection = null;

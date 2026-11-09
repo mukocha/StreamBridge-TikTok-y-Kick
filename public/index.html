@@ -14,10 +14,15 @@
         <div class="logo-badge">⚡ TK</div>
         <div>
           <h1>StreamBridge Live</h1>
-          <div class="subtitle">Chat unificado y alertas para TikTok y Kick en OBS Studio</div>
+          <div class="subtitle">Chat unificado, alertas y viewers para TikTok y Kick en OBS Studio</div>
         </div>
       </div>
-      <div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px; background: #131b2e; border: 1px solid rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 12px; font-size: 13px;">
+          <span style="color: #53fc18; font-weight: bold;">🟢 Kick: <span id="panel-viewers-kick">0</span></span>
+          <span style="color: #fe2c55; font-weight: bold;">🎵 TikTok: <span id="panel-viewers-tiktok">0</span></span>
+          <span style="color: #fff; font-weight: 800; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 10px;">👥 Total: <span id="panel-viewers-total">0</span></span>
+        </div>
         <a href="/dock" target="_blank" style="text-decoration: none;">
           <button class="btn-secondary" style="font-size: 13px;">🖥️ Abrir Dock de OBS</button>
         </a>
@@ -68,12 +73,6 @@
           <button class="btn-tiktok" id="tiktok-connect-btn">Conectar</button>
           <button class="btn-danger" id="tiktok-disconnect-btn" style="display: none;">Desconectar</button>
         </div>
-        <div style="margin-bottom: 8px;">
-          <input type="text" id="tiktok-key-input" placeholder="API Key de EulerStream (Opcional si usas nube)" style="font-size: 12px; padding: 6px 10px; width: 100%;">
-          <div style="font-size: 11px; margin-top: 4px; color: #94a3b8;">
-            🔑 <a href="https://www.eulerstream.com/dashboard" target="_blank" style="color: #00f2fe; text-decoration: underline;">Obtén tu API Key gratuita aquí</a> (inicia con Google en 20 seg) para conectar en la nube.
-          </div>
-        </div>
         <div class="status-message" id="tiktok-status-msg"></div>
       </div>
     </div>
@@ -101,6 +100,14 @@
           <span class="url-link" id="link-alerts">http://localhost:3000/alerts</span>
         </div>
         <button class="copy-btn" onclick="copyUrl('link-alerts')">📋 Copiar Enlace</button>
+      </div>
+
+      <div class="url-box">
+        <div class="url-info">
+          <span class="url-title">👥 Contador de Viewers (Overlay transparente para OBS)</span>
+          <span class="url-link" id="link-viewers">http://localhost:3000/viewers</span>
+        </div>
+        <button class="copy-btn" onclick="copyUrl('link-viewers')">📋 Copiar Enlace</button>
       </div>
 
       <div class="url-box">
@@ -159,6 +166,6 @@
 
   <div id="toast"></div>
 
-  <script src="/js/panel.js?v=1.0.4"></script>
+  <script src="/js/panel.js?v=1.0.5"></script>
 </body>
 </html>

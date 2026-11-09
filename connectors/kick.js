@@ -10,6 +10,8 @@ class KickConnector extends EventEmitter {
     this.channelId = null;
     this.isConnected = false;
     this.pingInterval = null;
+    this.viewerPollInterval = null;
+    this.viewers = 0;
     // Current working Kick Pusher credentials
     this.pusherKey = '34bf7a0ff419a2a775b9';
     this.pusherCluster = 'us2';
@@ -151,6 +153,9 @@ class KickConnector extends EventEmitter {
       this.isConnected = true;
       this.emit('status', { status: 'connected', message: `Conectado a Kick (${this.channelSlug})` });
 
+      // Iniciar sondeo de espectadores de Kick
+      this._startViewerPolling();
+
       // Subscribe to chatroom
       this.ws.send(JSON.stringify({
         event: 'pusher:subscribe',
@@ -264,11 +269,45 @@ class KickConnector extends EventEmitter {
     }
   }
 
+  _startViewerPolling() {
+    this._stopViewerPolling();
+    const poll = async () => {
+      if (!this.isConnected || !this.channelSlug) return;
+      try {
+        const res = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.livestream) {
+            this.viewers = Number(data.livestream.viewer_count) || 0;
+          } else {
+            this.viewers = 0;
+          }
+          this.emit('viewers', { platform: 'kick', viewers: this.viewers });
+        }
+      } catch (_) {}
+    };
+    poll();
+    this.viewerPollInterval = setInterval(poll, 20000);
+  }
+
+  _stopViewerPolling() {
+    if (this.viewerPollInterval) {
+      clearInterval(this.viewerPollInterval);
+      this.viewerPollInterval = null;
+    }
+  }
+
   _clearIntervals() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+    this._stopViewerPolling();
   }
 
   disconnect() {

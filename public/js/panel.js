@@ -45,11 +45,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const origin = window.location.origin;
   document.getElementById('link-chat').textContent = `${origin}/chat`;
   document.getElementById('link-alerts').textContent = `${origin}/alerts`;
+  document.getElementById('link-viewers').textContent = `${origin}/viewers`;
   document.getElementById('link-dock').textContent = `${origin}/dock`;
 });
 
+const panelKickViewers = document.getElementById('panel-viewers-kick');
+const panelTikTokViewers = document.getElementById('panel-viewers-tiktok');
+const panelTotalViewers = document.getElementById('panel-viewers-total');
+
+function updatePanelViewers(v) {
+  if (!v) return;
+  if (panelKickViewers) panelKickViewers.textContent = (v.kick || 0).toLocaleString();
+  if (panelTikTokViewers) panelTikTokViewers.textContent = (v.tiktok || 0).toLocaleString();
+  if (panelTotalViewers) panelTotalViewers.textContent = (v.total || 0).toLocaleString();
+}
+
 // Socket Events
 socket.on('init', ({ state, recentMessages }) => {
+  if (state.viewers) {
+    updatePanelViewers(state.viewers);
+  }
   if (state.kick) {
     kickInput.value = state.kick.user || '';
     updatePlatformUI('kick', state.kick.status, state.kick.message);
@@ -66,6 +81,10 @@ socket.on('init', ({ state, recentMessages }) => {
 
 socket.on('status:update', (data) => {
   updatePlatformUI(data.platform, data.status, data.message);
+});
+
+socket.on('viewers:update', (viewers) => {
+  updatePanelViewers(viewers);
 });
 
 socket.on('chat:message', (msg) => {
