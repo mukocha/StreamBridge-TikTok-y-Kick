@@ -2,39 +2,49 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>OBS Dock - Chat & Panel</title>
+  <title>OBS Dock - Chat, Alertas & Viewers</title>
   <link rel="stylesheet" href="/css/chat.css">
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      background: #0f172a;
-      padding: 10px;
+      background: #0b0f19;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       height: 100vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
+      padding: 8px;
     }
-    .dock-header {
+
+    /* Header Bar */
+    .dock-top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #131b2e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
       padding: 8px 12px;
-      background: #1e293b;
-      border-radius: 8px;
       margin-bottom: 8px;
-      font-size: 13px;
+      flex-shrink: 0;
     }
+
     .status-group {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 600;
     }
+
     .pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-weight: 600;
-      font-size: 11px;
+      gap: 5px;
     }
+
     .dot {
       width: 8px;
       height: 8px;
@@ -43,56 +53,301 @@
     .dot.connected { background: #10b981; box-shadow: 0 0 6px #10b981; }
     .dot.disconnected { background: #ef4444; }
     .dot.connecting { background: #f59e0b; }
-    .btn-clear {
-      background: #334155;
-      color: #94a3b8;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
+
+    /* Viewers Box */
+    .viewers-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
       font-size: 11px;
     }
-    .btn-clear:hover {
-      background: #475569;
+
+    .v-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+    }
+    .v-item.kick { color: #53fc18; }
+    .v-item.tiktok { color: #fe2c55; }
+    .v-item.total {
+      color: #fff;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      padding-left: 8px;
+    }
+
+    .dot-live {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+      animation: pulseLive 1.5s infinite;
+    }
+
+    @keyframes pulseLive {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Tabs Bar */
+    .dock-tabs {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      background: #18223a;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: #233050;
       color: #fff;
     }
+
+    .tab-btn.active {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    .tab-badge {
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 10px;
+      margin-left: 4px;
+    }
+
+    .actions-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-action {
+      background: #18223a;
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .btn-action:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    /* Live Mini Alert Banner */
+    #dock-alert-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(83, 252, 24, 0.15), rgba(254, 44, 85, 0.15));
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      animation: slideDown 0.3s ease;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Main Content Area */
+    .view-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
     #chat-container {
       flex: 1;
       overflow-y: auto;
-      max-height: calc(100vh - 60px);
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       mask-image: none;
       -webkit-mask-image: none;
+      padding: 0;
     }
+
     .chat-message {
       max-width: 100%;
-      margin-bottom: 6px;
-      font-size: 14px;
-      padding: 8px 10px;
+      margin: 0;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+
+    /* Alerts Feed Tab */
+    #alerts-container {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .alert-feed-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #131b2e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .alert-feed-item.kick { border-left: 3px solid #53fc18; }
+    .alert-feed-item.tiktok { border-left: 3px solid #fe2c55; }
+
+    .alert-feed-icon {
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
+    }
+
+    .alert-feed-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .alert-feed-user {
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .alert-feed-detail {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .alert-feed-time {
+      color: #64748b;
+      font-size: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
   </style>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <div class="dock-header">
+  <!-- Header: Status + Viewers Counter -->
+  <div class="dock-top-bar">
     <div class="status-group">
-      <span class="pill" id="kick-dock-status">
-        <span class="dot disconnected" id="kick-dot"></span> Kick (<span id="dock-kick-v">0</span>)
+      <span class="pill">
+        <span class="dot disconnected" id="kick-dot"></span> Kick
       </span>
-      <span class="pill" id="tiktok-dock-status">
-        <span class="dot disconnected" id="tiktok-dot"></span> TikTok (<span id="dock-tiktok-v">0</span>)
-      </span>
-      <span class="pill" style="color: #fff; font-weight: bold; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 8px;">
-        👥 <span id="dock-total-v">0</span>
+      <span class="pill">
+        <span class="dot disconnected" id="tiktok-dot"></span> TikTok
       </span>
     </div>
-    <button class="btn-clear" onclick="clearDockChat()">Limpiar</button>
+
+    <div class="viewers-box">
+      <div class="v-item kick">🟢 <span id="dock-kick-v">0</span></div>
+      <div class="v-item tiktok">🎵 <span id="dock-tiktok-v">0</span></div>
+      <div class="v-item total"><span class="dot-live"></span> <span id="dock-total-v">0</span></div>
+    </div>
   </div>
-  <div id="chat-container"></div>
+
+  <!-- Tabs Navigation -->
+  <div class="dock-tabs">
+    <div class="tab-buttons">
+      <button class="tab-btn active" id="tab-chat-btn" onclick="switchTab('chat')">💬 Chat</button>
+      <button class="tab-btn" id="tab-alerts-btn" onclick="switchTab('alerts')">
+        🔔 Alertas <span class="tab-badge" id="alerts-count-badge" style="display: none;">0</span>
+      </button>
+    </div>
+    <div class="actions-group">
+      <button class="btn-action" onclick="clearCurrentView()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Live Flash Alert Banner -->
+  <div id="dock-alert-banner" onclick="switchTab('alerts')">
+    <span id="banner-text">¡Nueva alerta recibida!</span>
+  </div>
+
+  <!-- Content Views -->
+  <div class="view-content">
+    <div id="chat-container"></div>
+    <div id="alerts-container">
+      <div id="alerts-empty" style="color: #64748b; font-size: 12px; text-align: center; margin-top: 40px;">
+        No hay alertas recientes registradas.
+      </div>
+    </div>
+  </div>
+
   <script src="/js/chat.js"></script>
   <script>
     const dockKickV = document.getElementById('dock-kick-v');
     const dockTikTokV = document.getElementById('dock-tiktok-v');
     const dockTotalV = document.getElementById('dock-total-v');
+
+    const tabChatBtn = document.getElementById('tab-chat-btn');
+    const tabAlertsBtn = document.getElementById('tab-alerts-btn');
+    const chatContainer = document.getElementById('chat-container');
+    const alertsContainer = document.getElementById('alerts-container');
+    const alertsEmpty = document.getElementById('alerts-empty');
+    const alertsBadge = document.getElementById('alerts-count-badge');
+    const alertBanner = document.getElementById('dock-alert-banner');
+    const bannerText = document.getElementById('banner-text');
+
+    let currentTab = 'chat';
+    let unreadAlerts = 0;
+    let bannerTimeout = null;
+
+    function switchTab(tab) {
+      currentTab = tab;
+      if (tab === 'chat') {
+        tabChatBtn.classList.add('active');
+        tabAlertsBtn.classList.remove('active');
+        chatContainer.style.display = 'flex';
+        alertsContainer.style.display = 'none';
+      } else {
+        tabAlertsBtn.classList.add('active');
+        tabChatBtn.classList.remove('active');
+        chatContainer.style.display = 'none';
+        alertsContainer.style.display = 'flex';
+        unreadAlerts = 0;
+        alertsBadge.style.display = 'none';
+      }
+    }
 
     function updateDockViewers(v) {
       if (!v) return;
@@ -101,24 +356,92 @@
       if (dockTotalV) dockTotalV.textContent = (v.total || 0).toLocaleString();
     }
 
-    socket.on('init', ({ state }) => {
-      updateDockStatus('kick', state.kick.status);
-      updateDockStatus('tiktok', state.tiktok.status);
-      if (state.viewers) updateDockViewers(state.viewers);
-    });
-    socket.on('status:update', (data) => {
-      updateDockStatus(data.platform, data.status);
-    });
-    socket.on('viewers:update', (v) => {
-      updateDockViewers(v);
-    });
     function updateDockStatus(platform, status) {
       const dot = document.getElementById(`${platform}-dot`);
       if (!dot) return;
       dot.className = `dot ${status}`;
     }
-    function clearDockChat() {
-      document.getElementById('chat-container').innerHTML = '';
+
+    function addAlertToDock(alert) {
+      if (alertsEmpty) alertsEmpty.style.display = 'none';
+
+      const item = document.createElement('div');
+      item.className = `alert-feed-item ${alert.platform}`;
+
+      let icon = '🎉';
+      if (alert.type === 'gift' || alert.type === 'gift_sub') icon = '🎁';
+      else if (alert.type === 'subscription') icon = '⭐';
+      else if (alert.type === 'follow') icon = '❤️';
+
+      const timeStr = new Date(alert.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      item.innerHTML = `
+        <span class="alert-feed-icon">${icon}</span>
+        <div class="alert-feed-info">
+          <div style="display: flex; justify-content: space-between;">
+            <span class="alert-feed-user">${escapeHtml(alert.user)}</span>
+            <span class="alert-feed-time">${timeStr}</span>
+          </div>
+          <span class="alert-feed-detail">${escapeHtml(alert.details || '')}</span>
+        </div>
+      `;
+
+      alertsContainer.insertBefore(item, alertsContainer.firstChild);
+
+      // Flash Banner
+      bannerText.innerHTML = `<strong>${escapeHtml(alert.platform.toUpperCase())}:</strong> ${icon} <strong>${escapeHtml(alert.user)}</strong> ${escapeHtml(alert.details || '')}`;
+      alertBanner.style.display = 'block';
+      clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => {
+        alertBanner.style.display = 'none';
+      }, 7000);
+
+      // Badge count if in chat tab
+      if (currentTab !== 'alerts') {
+        unreadAlerts++;
+        alertsBadge.textContent = unreadAlerts;
+        alertsBadge.style.display = 'inline-block';
+      }
+    }
+
+    function clearCurrentView() {
+      if (currentTab === 'chat') {
+        chatContainer.innerHTML = '';
+      } else {
+        alertsContainer.innerHTML = '';
+        if (alertsEmpty) alertsEmpty.style.display = 'block';
+      }
+    }
+
+    socket.on('init', ({ state, alertHistory }) => {
+      updateDockStatus('kick', state.kick.status);
+      updateDockStatus('tiktok', state.tiktok.status);
+      if (state.viewers) updateDockViewers(state.viewers);
+      if (Array.isArray(alertHistory)) {
+        alertHistory.forEach(addAlertToDock);
+      }
+    });
+
+    socket.on('status:update', (data) => {
+      updateDockStatus(data.platform, data.status);
+    });
+
+    socket.on('viewers:update', (v) => {
+      updateDockViewers(v);
+    });
+
+    socket.on('alert:event', (alert) => {
+      addAlertToDock(alert);
+    });
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
   </script>
 </body>

@@ -50,6 +50,16 @@ const state = {
 const recentMessages = [];
 const MAX_RECENT_MESSAGES = 40;
 
+const alertHistory = [];
+const MAX_ALERT_HISTORY = 50;
+
+function addAlertToHistory(alert) {
+  alertHistory.unshift(alert);
+  if (alertHistory.length > MAX_ALERT_HISTORY) {
+    alertHistory.pop();
+  }
+}
+
 // Connectors
 const kick = new KickConnector();
 const tiktok = new TikTokConnector();
@@ -78,6 +88,7 @@ kick.on('chat', (message) => {
 });
 
 kick.on('alert', (alert) => {
+  addAlertToHistory(alert);
   io.emit('alert:event', alert);
 });
 
@@ -100,6 +111,7 @@ tiktok.on('chat', (message) => {
 });
 
 tiktok.on('alert', (alert) => {
+  addAlertToHistory(alert);
   io.emit('alert:event', alert);
 });
 
@@ -121,7 +133,8 @@ io.on('connection', (socket) => {
   // Send initial data to client
   socket.emit('init', {
     state,
-    recentMessages
+    recentMessages,
+    alertHistory
   });
 
   // Connect request from panel
@@ -208,6 +221,7 @@ io.on('connection', (socket) => {
     }
 
     if (mockAlert) {
+      addAlertToHistory(mockAlert);
       io.emit('alert:event', mockAlert);
     }
   });
