@@ -83,24 +83,39 @@ function updatePlatformUI(platform, status, message) {
   }
 }
 
+socket.on('connect', () => {
+  console.log('✅ Conectado al servidor');
+});
+
+socket.on('disconnect', () => {
+  console.warn('⚠️ Desconectado del servidor');
+  showToast('Reconectando con el servidor...');
+});
+
 // Connect / Disconnect Handlers
 kickConnectBtn.addEventListener('click', () => {
   const user = kickInput.value.trim();
   if (!user) return alert('Por favor introduce el nombre de tu canal en Kick');
+  updatePlatformUI('kick', 'connecting', 'Conectando con Kick...');
   socket.emit('channel:connect', { platform: 'kick', username: user });
+  showToast('Enviando solicitud de conexión...');
 });
 
 kickDisconnectBtn.addEventListener('click', () => {
+  updatePlatformUI('kick', 'disconnected', 'Desconectando...');
   socket.emit('channel:disconnect', { platform: 'kick' });
 });
 
 tiktokConnectBtn.addEventListener('click', () => {
   const user = tiktokInput.value.trim();
   if (!user) return alert('Por favor introduce tu usuario de TikTok (@usuario)');
+  updatePlatformUI('tiktok', 'connecting', 'Conectando con TikTok...');
   socket.emit('channel:connect', { platform: 'tiktok', username: user });
+  showToast('Enviando solicitud de conexión...');
 });
 
 tiktokDisconnectBtn.addEventListener('click', () => {
+  updatePlatformUI('tiktok', 'disconnected', 'Desconectando...');
   socket.emit('channel:disconnect', { platform: 'tiktok' });
 });
 

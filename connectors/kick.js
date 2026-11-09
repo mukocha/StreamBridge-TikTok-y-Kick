@@ -22,9 +22,10 @@ class KickConnector extends EventEmitter {
     const cleanInput = String(channelInput).trim().toLowerCase().replace(/^@/, '');
     this.channelSlug = cleanInput;
 
-    // Cache / Known channels dictionary
+    // Known channels dictionary
     const knownChannels = {
       'chamukoi': { chatroomId: 6823990, channelId: 6884630 },
+      '6823990': { chatroomId: 6823990, channelId: 6884630 },
       'westcol': { chatroomId: 669512, channelId: 669746 },
       'xqc': { chatroomId: 668, channelId: 668 }
     };
