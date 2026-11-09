@@ -107,13 +107,13 @@ io.on('connection', (socket) => {
   });
 
   // Connect request from panel
-  socket.on('channel:connect', async ({ platform, username }) => {
+  socket.on('channel:connect', async ({ platform, username, apiKey }) => {
     if (platform === 'kick') {
       state.kick.user = username;
       await kick.connect(username);
     } else if (platform === 'tiktok') {
       state.tiktok.user = username;
-      await tiktok.connect(username);
+      await tiktok.connect(username, { signApiKey: apiKey || process.env.TIKTOK_SIGN_API_KEY });
     }
   });
 

@@ -21,11 +21,21 @@ const kickText = document.getElementById('kick-status-text');
 const kickMsg = document.getElementById('kick-status-msg');
 
 const tiktokInput = document.getElementById('tiktok-user-input');
+const tiktokKeyInput = document.getElementById('tiktok-key-input');
 const tiktokConnectBtn = document.getElementById('tiktok-connect-btn');
 const tiktokDisconnectBtn = document.getElementById('tiktok-disconnect-btn');
 const tiktokDot = document.getElementById('tiktok-status-dot');
 const tiktokText = document.getElementById('tiktok-status-text');
 const tiktokMsg = document.getElementById('tiktok-status-msg');
+
+// Load saved key from localStorage if available
+if (localStorage.getItem('tiktok_api_key')) {
+  tiktokKeyInput.value = localStorage.getItem('tiktok_api_key');
+}
+
+tiktokKeyInput.addEventListener('change', () => {
+  localStorage.setItem('tiktok_api_key', tiktokKeyInput.value.trim());
+});
 
 const previewBox = document.getElementById('preview-messages');
 const toast = document.getElementById('toast');
@@ -108,9 +118,10 @@ kickDisconnectBtn.addEventListener('click', () => {
 
 tiktokConnectBtn.addEventListener('click', () => {
   const user = tiktokInput.value.trim();
+  const apiKey = tiktokKeyInput.value.trim();
   if (!user) return alert('Por favor introduce tu usuario de TikTok (@usuario)');
   updatePlatformUI('tiktok', 'connecting', 'Conectando con TikTok...');
-  socket.emit('channel:connect', { platform: 'tiktok', username: user });
+  socket.emit('channel:connect', { platform: 'tiktok', username: user, apiKey: apiKey });
   showToast('Enviando solicitud de conexión...');
 });
 

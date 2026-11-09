@@ -17,12 +17,20 @@ class TikTokConnector extends EventEmitter {
     this.emit('status', { status: 'connecting', message: `Conectando a TikTok Live: @${this.username}...` });
 
     try {
-      this.connection = new TikTokLiveConnection(this.username, {
+      const signApiKey = options.signApiKey || process.env.TIKTOK_SIGN_API_KEY || undefined;
+      
+      const connOptions = {
         processInitialData: false,
         enableExtendedGiftInfo: true,
         requestPollingIntervalMs: 1500,
         ...options
-      });
+      };
+
+      if (signApiKey) {
+        connOptions.signApiKey = signApiKey;
+      }
+
+      this.connection = new TikTokLiveConnection(this.username, connOptions);
 
       this.connection.on('connected', (state) => {
         this.isConnected = true;
