@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 // State
 const state = {
   kick: {
-    user: process.env.KICK_USER || '',
+    user: process.env.KICK_USER || 'chamukoi',
     status: 'disconnected',
     message: 'No conectado'
   },

@@ -22,6 +22,24 @@ class KickConnector extends EventEmitter {
     const cleanInput = String(channelInput).trim().toLowerCase().replace(/^@/, '');
     this.channelSlug = cleanInput;
 
+    // Cache / Known channels dictionary
+    const knownChannels = {
+      'chamukoi': { chatroomId: 6823990, channelId: 6884630 },
+      'westcol': { chatroomId: 669512, channelId: 669746 },
+      'xqc': { chatroomId: 668, channelId: 668 }
+    };
+
+    if (knownChannels[cleanInput]) {
+      this.chatroomId = knownChannels[cleanInput].chatroomId;
+      this.channelId = knownChannels[cleanInput].channelId;
+      this.emit('status', {
+        status: 'connecting',
+        message: `Canal ${cleanInput} reconocido (Chatroom ${this.chatroomId}). Conectando...`
+      });
+      this._initWebSocket();
+      return true;
+    }
+
     // Layer 1: If input is already numeric ID, connect directly without hitting kick.com
     if (/^\d+$/.test(cleanInput)) {
       this.chatroomId = cleanInput;
