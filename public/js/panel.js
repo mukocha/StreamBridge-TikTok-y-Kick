@@ -153,6 +153,14 @@ function testChat(platform) {
   showToast(`Mensaje simulado enviado a ${platform}`);
 }
 
+function formatChatMessage(text) {
+  if (!text) return '';
+  let safe = escapeHtml(text);
+  return safe.replace(/\[emote:(\d+):([^\]]+)\]/g, (match, id, name) => {
+    return `<img class="chat-emote" style="height: 20px; vertical-align: middle; margin: 0 2px;" src="https://files.kick.com/emotes/${id}/fullsize" alt="${name}" title="${name}" loading="lazy">`;
+  });
+}
+
 function addPreviewMessage(msg) {
   const item = document.createElement('div');
   item.style.fontSize = '13px';
@@ -168,7 +176,7 @@ function addPreviewMessage(msg) {
   item.innerHTML = `
     <span style="font-size: 10px; font-weight: bold; background: ${badgeColor}; color: #000; padding: 2px 4px; border-radius: 3px; margin-right: 6px;">${badgeText}</span>
     <strong style="color: #cbd5e1;">${escapeHtml(msg.user)}:</strong>
-    <span style="color: #94a3b8;">${escapeHtml(msg.message)}</span>
+    <span style="color: #94a3b8;">${formatChatMessage(msg.message)}</span>
   `;
 
   previewBox.appendChild(item);

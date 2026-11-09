@@ -143,6 +143,14 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
+.chat-emote {
+  height: 24px;
+  vertical-align: middle;
+  margin: 0 2px;
+  object-fit: contain;
+  display: inline-block;
+}
+
 @keyframes slideIn {
   0% {
     opacity: 0;

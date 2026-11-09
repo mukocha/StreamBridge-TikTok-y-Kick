@@ -30,6 +30,14 @@ function applySettings(newSettings) {
   document.documentElement.style.setProperty('--font-size', `${settings.fontSize}px`);
 }
 
+function formatChatMessage(text) {
+  if (!text) return '';
+  let safe = escapeHtml(text);
+  return safe.replace(/\[emote:(\d+):([^\]]+)\]/g, (match, id, name) => {
+    return `<img class="chat-emote" src="https://files.kick.com/emotes/${id}/fullsize" alt="${name}" title="${name}" loading="lazy">`;
+  });
+}
+
 function addMessage(msg, autoScroll = true) {
   const div = document.createElement('div');
   div.className = `chat-message ${msg.platform}-msg`;
@@ -62,7 +70,7 @@ function addMessage(msg, autoScroll = true) {
           ${escapeHtml(msg.user)}
         </span>
       </div>
-      <div class="message-text">${escapeHtml(msg.message)}</div>
+      <div class="message-text">${formatChatMessage(msg.message)}</div>
     </div>
   `;
 

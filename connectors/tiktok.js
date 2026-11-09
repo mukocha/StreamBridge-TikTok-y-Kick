@@ -37,8 +37,9 @@ class TikTokConnector extends EventEmitter {
 
       // Verificar si está en vivo antes de conectar
       let roomId = undefined;
+      let roomCheck = null;
       try {
-        const roomCheck = await this._fetchRoomData(this.connection, this.username);
+        roomCheck = await this._fetchRoomData(this.connection, this.username);
         if (roomCheck) {
           if (!roomCheck.isLive) {
             throw Object.assign(new Error("El usuario no está en directo"), { name: 'UserOfflineError' });
@@ -52,7 +53,7 @@ class TikTokConnector extends EventEmitter {
         }
       } catch (checkErr) {
         if (checkErr.name === 'UserOfflineError') throw checkErr;
-        // Si falla la verificación, intentar conectar de todas formas
+        // Si falla la verificación previa, intentar conectar de todas formas
       }
 
       // Escuchar errores para evitar que tumben el proceso Node.js

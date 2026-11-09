@@ -375,16 +375,32 @@ class KickConnector extends EventEmitter {
     const poll = async () => {
       if (!this.isConnected || !this.channelSlug) return;
       try {
-        const res = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json'
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.livestream) {
-            this.viewers = Number(data.livestream.viewer_count) || 0;
+        let data = null;
+        try {
+          data = await fetchWithCurl(`https://kick.com/api/v1/channels/${this.channelSlug}`);
+        } catch (_) {}
+
+        if (!data) {
+          try {
+            data = await fetchWithCurl(`https://kick.com/api/v2/channels/${this.channelSlug}`);
+          } catch (_) {}
+        }
+
+        if (!data) {
+          try {
+            const res = await fetch(`https://kick.com/api/v1/channels/${this.channelSlug}`, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+              }
+            });
+            if (res.ok) data = await res.json();
+          } catch (_) {}
+        }
+
+        if (data) {
+          if (data.livestream) {
+            this.viewers = Number(data.livestream.viewer_count || data.livestream.viewers || 0);
           } else {
             this.viewers = 0;
           }
@@ -393,7 +409,7 @@ class KickConnector extends EventEmitter {
       } catch (_) {}
     };
     poll();
-    this.viewerPollInterval = setInterval(poll, 20000);
+    this.viewerPollInterval = setInterval(poll, 15000);
   }
 
   _stopViewerPolling() {
