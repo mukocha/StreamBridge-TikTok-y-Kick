@@ -232,21 +232,8 @@ class TikTokConnector extends EventEmitter {
         likeBatches.set(username, current);
       });
 
-      // Nuevos espectadores que entran a la sala (Member)
-      this.connection.on('member', (data) => {
-        const user = data.user || {};
-        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Espectador';
-        this.emit('alert', {
-          id: 'tiktok-member-' + Date.now(),
-          platform: 'tiktok',
-          type: 'member',
-          user: username,
-          title: 'Nuevo espectador',
-          details: `se unió al directo 👋`,
-          sound: false, // SILENCIOSO (solo registro en dock/panel)
-          timestamp: Date.now()
-        });
-      });
+      // Nota: Evento 'member' (alguien entra al directo) omitido intencionalmente
+      // para evitar saturar el chat y alertas con miles de notificaciones de entrada.
 
       // Connect
       await this.connection.connect(roomId);

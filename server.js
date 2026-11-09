@@ -247,17 +247,6 @@ io.on('connection', (socket) => {
         sound: false,
         timestamp: Date.now()
       };
-    } else if (type === 'tiktok-member') {
-      mockAlert = {
-        id: 'test-' + Date.now(),
-        platform: 'tiktok',
-        type: 'member',
-        user: 'NuevoEspectador_42',
-        title: 'Nuevo espectador',
-        details: 'se unió al directo 👋',
-        sound: false,
-        timestamp: Date.now()
-      };
     }
 
     // KICK EVENTS

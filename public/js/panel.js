@@ -344,13 +344,13 @@ function setPanelChatMode(slowMode) {
 function testCurrentSound() {
   const slider = document.getElementById('sound-volume-slider');
   const vol = (slider ? Number(slider.value) : 80) / 100;
-  const url = document.getElementById('sound-url-input')?.value.trim();
+  const url = document.getElementById('sound-url-input')?.value.trim() || '/sounds/alert.wav';
 
-  if (url) {
+  try {
     const a = new Audio(url);
     a.volume = Math.max(0, Math.min(1, vol));
     a.play().catch(() => playDefaultChime(vol));
-  } else {
+  } catch (_) {
     playDefaultChime(vol);
   }
 }

@@ -52,20 +52,18 @@ let currentAudio = null;
 // Sonido: Si hay URL personalizado lo reproduce; de lo contrario usa el sonido predeterminado
 function playAlertSound() {
   if (!settings.soundEnabled) return;
+  const vol = Math.max(0, Math.min(1, settings.alertVolume !== undefined ? settings.alertVolume : 0.8));
+  const soundSrc = settings.customSoundUrl || '/sounds/alert.wav';
   try {
-    if (settings.customSoundUrl) {
-      if (currentAudio) {
-        try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (_) {}
-      }
-      currentAudio = new Audio(settings.customSoundUrl);
-      currentAudio.volume = Math.max(0, Math.min(1, settings.alertVolume !== undefined ? settings.alertVolume : 0.8));
-      currentAudio.play().catch(e => {
-        console.warn('Audio personalizado falló, usando predeterminado:', e);
-        playDefaultSynthesizedChime();
-      });
-    } else {
-      playDefaultSynthesizedChime();
+    if (currentAudio) {
+      try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (_) {}
     }
+    currentAudio = new Audio(soundSrc);
+    currentAudio.volume = vol;
+    currentAudio.play().catch(e => {
+      console.warn('Audio falló, usando Web Audio sintetizado:', e);
+      playDefaultSynthesizedChime();
+    });
   } catch (_) {
     playDefaultSynthesizedChime();
   }

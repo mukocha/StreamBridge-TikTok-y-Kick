@@ -112,6 +112,17 @@
       color: #fbbf24;
     }
 
+    .btn-mode.sound {
+      border-color: #10b981;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .btn-mode.sound.muted {
+      border-color: #ef4444;
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.15);
+    }
+
     .btn-clear {
       background: #1e2230;
       color: #94a3b8;
@@ -188,55 +199,122 @@
       display: inline-block;
     }
 
-    /* Alertas dentro del Chat (Destacadas pero compactas) */
+    /* Alertas dentro del Chat (Ultra llamativas y destacadas) */
     .alert-line {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 8px;
-      margin: 3px 0;
-      border-radius: 6px;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 8px;
       font-size: 12px;
-      line-height: 1.35;
-      animation: alertSlide 0.25s ease;
+      line-height: 1.4;
+      position: relative;
+      overflow: hidden;
+      animation: alertPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .alert-line::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
     }
 
     .alert-line.kick {
-      background: rgba(83, 252, 24, 0.12);
-      border-left: 3px solid #53fc18;
-      color: #d9f99d;
+      background: linear-gradient(135deg, rgba(83, 252, 24, 0.18) 0%, rgba(13, 19, 33, 0.95) 100%);
+      border: 1px solid rgba(83, 252, 24, 0.4);
+      box-shadow: 0 3px 14px rgba(83, 252, 24, 0.2);
+    }
+    .alert-line.kick::before {
+      background: #53fc18;
+      box-shadow: 0 0 10px #53fc18;
     }
 
     .alert-line.tiktok {
-      background: rgba(254, 44, 85, 0.12);
-      border-left: 3px solid #fe2c55;
-      color: #fecdd3;
+      background: linear-gradient(135deg, rgba(254, 44, 85, 0.2) 0%, rgba(13, 19, 33, 0.95) 100%);
+      border: 1px solid rgba(254, 44, 85, 0.4);
+      box-shadow: 0 3px 14px rgba(254, 44, 85, 0.22);
+    }
+    .alert-line.tiktok::before {
+      background: #fe2c55;
+      box-shadow: 0 0 10px #fe2c55;
     }
 
-    .alert-icon {
-      font-size: 14px;
-      flex-shrink: 0;
+    .alert-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
     }
 
-    .alert-content {
-      flex: 1;
+    .alert-badge {
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .alert-line.kick .alert-badge {
+      background: rgba(83, 252, 24, 0.25);
+      color: #53fc18;
+      border: 1px solid rgba(83, 252, 24, 0.5);
+    }
+    .alert-line.tiktok .alert-badge {
+      background: rgba(254, 44, 85, 0.25);
+      color: #ff5476;
+      border: 1px solid rgba(254, 44, 85, 0.5);
     }
 
-    .alert-user {
+    .alert-body {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-big-icon {
+      font-size: 22px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+      animation: iconPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes iconPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    .alert-user-name {
+      font-size: 13px;
       font-weight: 800;
-      color: #fff;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      margin-right: 4px;
+    }
+
+    .alert-details-text {
+      font-size: 12px;
+      color: #f1f5f9;
+      font-weight: 500;
     }
 
     .alert-time {
       font-size: 10px;
-      color: #64748b;
+      color: #94a3b8;
       margin-left: auto;
       flex-shrink: 0;
     }
 
-    @keyframes alertSlide {
-      from { opacity: 0; transform: translateX(-6px); }
-      to { opacity: 1; transform: translateX(0); }
+    @keyframes alertPop {
+      0% { opacity: 0; transform: translateY(-6px) scale(0.96); }
+      60% { transform: translateY(0) scale(1.02); }
+      100% { opacity: 1; transform: scale(1); }
     }
   </style>
 </head>
@@ -255,6 +333,7 @@
     </div>
 
     <div class="actions-group">
+      <button class="btn-mode sound" id="btn-dock-sound" onclick="toggleDockSound()" title="Sonido de alertas activado. Haz clic para probar o silenciar">🔊 Sonido</button>
       <button class="btn-mode normal" id="btn-slow-mode" onclick="toggleSlowMode()" title="Alternar entre modo normal y modo lento para chats rápidos">⚡ Normal</button>
       <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
     </div>
@@ -275,6 +354,104 @@
     let slowMode = false;
     let slowQueue = [];
     let slowTimer = null;
+
+    // Control de Audio en el Dock de OBS
+    let soundEnabled = true;
+    let alertVolume = 0.8;
+    let customSoundUrl = '';
+    let audioCtx = null;
+    let currentDockAudio = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioCtx = new AudioCtx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    function unlockAudio() {
+      getAudioContext();
+    }
+    window.addEventListener('click', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
+
+    function toggleDockSound() {
+      soundEnabled = !soundEnabled;
+      updateDockSoundButton();
+      if (soundEnabled) {
+        playDockAlertSound(true); // Prueba de audio inmediata al hacer clic
+      }
+    }
+
+    function updateDockSoundButton() {
+      const btn = document.getElementById('btn-dock-sound');
+      if (!btn) return;
+      if (soundEnabled) {
+        btn.textContent = '🔊 Sonido';
+        btn.className = 'btn-mode sound';
+        btn.title = 'Sonido de alertas ACTIVADO en OBS. Haz clic para silenciar';
+      } else {
+        btn.textContent = '🔇 Mudo';
+        btn.className = 'btn-mode sound muted';
+        btn.title = 'Sonido de alertas SILENCIADO en OBS. Haz clic para activar';
+      }
+    }
+
+    function playDockAlertSound(isTest = false) {
+      if (!soundEnabled && !isTest) return;
+      const vol = Math.max(0, Math.min(1, alertVolume !== undefined ? alertVolume : 0.8));
+      const soundSrc = customSoundUrl || '/sounds/alert.wav';
+
+      try {
+        if (currentDockAudio) {
+          try { currentDockAudio.pause(); currentDockAudio.currentTime = 0; } catch (_) {}
+        }
+        currentDockAudio = new Audio(soundSrc);
+        currentDockAudio.volume = vol;
+        currentDockAudio.play().catch(e => {
+          console.warn('HTML5 Audio en Dock falló, usando Web Audio sintetizado:', e);
+          playDockSynthesizedChime(vol);
+        });
+      } catch (_) {
+        playDockSynthesizedChime(vol);
+      }
+    }
+
+    function playDockSynthesizedChime(vol = 0.8) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const playNotes = () => {
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.24);
+          osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.36);
+
+          gain.gain.setValueAtTime(vol * 0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.9);
+        };
+
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(playNotes).catch(() => {});
+        } else {
+          playNotes();
+        }
+      } catch (_) {}
+    }
 
     function setSlowMode(enabled) {
       slowMode = Boolean(enabled);
@@ -368,31 +545,59 @@
       scrollToBottom();
     }
 
-    // 2. Alerta Integrada directamente en el Chat
+    // 2. Alerta Integrada directamente en el Chat (Diseño llamativo de alto impacto)
     function addAlertMessage(alert) {
+      if (!alert || alert.type === 'member') return; // Omitir aviso de entrada
+
       const div = document.createElement('div');
       div.className = `alert-line ${alert.platform}`;
 
+      let badgeTitle = 'ALERTA';
       let icon = '🎉';
-      if (alert.type === 'gift' || alert.type === 'gift_sub') icon = '🎁';
-      else if (alert.type === 'sub') icon = '⭐';
-      else if (alert.type === 'resub') icon = '🔄';
-      else if (alert.type === 'kicks') icon = '🪙';
-      else if (alert.type === 'host') icon = '📡';
-      else if (alert.type === 'follow') icon = '💖';
-      else if (alert.type === 'like') icon = '❤️';
-      else if (alert.type === 'share') icon = '🚀';
-      else if (alert.type === 'member') icon = '👋';
+
+      if (alert.type === 'gift') {
+        badgeTitle = alert.platform === 'tiktok' ? '🎁 REGALO TIKTOK' : '🎁 REGALO';
+        icon = '🎁';
+      } else if (alert.type === 'gift_sub') {
+        badgeTitle = '🎁 SUBS REGALADAS';
+        icon = '🎁';
+      } else if (alert.type === 'sub') {
+        badgeTitle = '⭐ NUEVA SUSCRIPCIÓN';
+        icon = '⭐';
+      } else if (alert.type === 'resub') {
+        badgeTitle = '🔄 RENOVACIÓN SUB';
+        icon = '🔄';
+      } else if (alert.type === 'kicks') {
+        badgeTitle = '🪙 REGALO KICKS';
+        icon = '🪙';
+      } else if (alert.type === 'host') {
+        badgeTitle = '📡 HOST / RAID';
+        icon = '📡';
+      } else if (alert.type === 'follow') {
+        badgeTitle = '💖 NUEVO SEGUIDOR';
+        icon = '💖';
+      } else if (alert.type === 'like') {
+        badgeTitle = '❤️ LIKES';
+        icon = '❤️';
+      } else if (alert.type === 'share') {
+        badgeTitle = '🚀 COMPARTIDO';
+        icon = '🚀';
+      }
 
       const timeStr = new Date(alert.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       div.innerHTML = `
-        <span class="alert-icon">${icon}</span>
-        <div class="alert-content">
-          <span class="alert-user">${escapeHtml(alert.user)}</span>
-          <span>${escapeHtml(alert.details || '')}</span>
+        <div class="alert-header">
+          <span class="alert-badge">${badgeTitle}</span>
+          <span class="alert-time">${timeStr}</span>
         </div>
-        <span class="alert-time">${timeStr}</span>
+        <div class="alert-body">
+          <span class="alert-big-icon">${icon}</span>
+          <div>
+            <span class="alert-user-name">${escapeHtml(alert.user)}</span>
+            <span class="alert-details-text">${escapeHtml(alert.details || '')}</span>
+          </div>
+        </div>
       `;
 
       feed.appendChild(div);
@@ -411,8 +616,12 @@
       updateDockStatus('kick', state.kick.status);
       updateDockStatus('tiktok', state.tiktok.status);
       if (state.viewers) updateDockViewers(state.viewers);
-      if (state.settings && state.settings.slowMode !== undefined) {
-        setSlowMode(state.settings.slowMode);
+      if (state.settings) {
+        if (state.settings.slowMode !== undefined) setSlowMode(state.settings.slowMode);
+        if (state.settings.soundEnabled !== undefined) soundEnabled = state.settings.soundEnabled;
+        if (state.settings.alertVolume !== undefined) alertVolume = state.settings.alertVolume;
+        if (state.settings.customSoundUrl !== undefined) customSoundUrl = state.settings.customSoundUrl;
+        updateDockSoundButton();
       }
 
       // Combinar y ordenar mensajes y alertas por fecha para mostrar historial cronológico
@@ -421,7 +630,9 @@
         recentMessages.forEach(m => combined.push({ kind: 'chat', data: m, time: m.timestamp || 0 }));
       }
       if (Array.isArray(alertHistory)) {
-        alertHistory.forEach(a => combined.push({ kind: 'alert', data: a, time: a.timestamp || 0 }));
+        alertHistory.forEach(a => {
+          if (a.type !== 'member') combined.push({ kind: 'alert', data: a, time: a.timestamp || 0 });
+        });
       }
 
       combined.sort((a, b) => a.time - b.time);
@@ -440,9 +651,12 @@
     });
 
     socket.on('settings:update', (settings) => {
-      if (settings && settings.slowMode !== undefined) {
-        setSlowMode(settings.slowMode);
-      }
+      if (!settings) return;
+      if (settings.slowMode !== undefined) setSlowMode(settings.slowMode);
+      if (settings.soundEnabled !== undefined) soundEnabled = settings.soundEnabled;
+      if (settings.alertVolume !== undefined) alertVolume = settings.alertVolume;
+      if (settings.customSoundUrl !== undefined) customSoundUrl = settings.customSoundUrl;
+      updateDockSoundButton();
     });
 
     socket.on('chat:message', (msg) => {
@@ -450,7 +664,11 @@
     });
 
     socket.on('alert:event', (alert) => {
+      if (alert.type === 'member') return; // Omitir avisos de entrada
       addAlertMessage(alert);
+      if (alert.sound !== false) {
+        playDockAlertSound();
+      }
     });
 
     function escapeHtml(text) {
