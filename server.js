@@ -167,17 +167,20 @@ io.on('connection', (socket) => {
   socket.on('test:alert', (type) => {
     let mockAlert = null;
 
+    // TIKTOK EVENTS
     if (type === 'tiktok-gift') {
       mockAlert = {
         id: 'test-' + Date.now(),
         platform: 'tiktok',
         type: 'gift',
         user: 'UsuarioFan_99',
-        giftName: 'Rosa Galáctica',
-        count: 5,
-        diamonds: 50,
+        title: '¡Regalo en TikTok Live!',
+        giftName: 'León Galáctico',
+        count: 1,
+        diamonds: 29999,
         giftIcon: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/gift_rose.png~tplv-obj.png',
-        details: '¡Envió Rosa Galáctica x5! 💎',
+        details: 'envió León Galáctico x1 (29999 💎)',
+        sound: true,
         timestamp: Date.now()
       };
     } else if (type === 'tiktok-follow') {
@@ -186,17 +189,91 @@ io.on('connection', (socket) => {
         platform: 'tiktok',
         type: 'follow',
         user: 'GamerTikToker',
-        details: '¡Comenzó a seguirte en TikTok! 🌟',
+        title: '¡Nuevo Seguidor en TikTok!',
+        details: 'comenzó a seguirte 💖',
+        sound: true,
+        timestamp: Date.now()
+      };
+    } else if (type === 'tiktok-sub') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'tiktok',
+        type: 'sub',
+        user: 'VIP_TikToker',
+        title: '¡Nueva Suscripción LIVE!',
+        details: 'se ha suscrito al canal ⭐',
+        sound: true,
+        timestamp: Date.now()
+      };
+    } else if (type === 'tiktok-like') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'tiktok',
+        type: 'like',
+        user: 'FanaticoDeLikes',
+        title: '¡Likes en TikTok!',
+        details: 'envió 50 likes ❤️',
+        sound: false, // Silencioso
+        timestamp: Date.now()
+      };
+    } else if (type === 'tiktok-share') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'tiktok',
+        type: 'share',
+        user: 'AmigoStreamer',
+        title: '¡Compartieron el LIVE!',
+        details: 'compartió la transmisión 🚀',
+        sound: false,
+        timestamp: Date.now()
+      };
+    } else if (type === 'tiktok-member') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'tiktok',
+        type: 'member',
+        user: 'NuevoEspectador_42',
+        title: 'Nuevo espectador',
+        details: 'se unió al directo 👋',
+        sound: false,
+        timestamp: Date.now()
+      };
+    }
+
+    // KICK EVENTS
+    else if (type === 'kick-follow') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'kick',
+        type: 'follow',
+        user: 'NuevoSeguidorKick',
+        title: '¡Nuevo Seguidor en Kick!',
+        details: 'comenzó a seguirte en Kick 🟢',
+        sound: true,
         timestamp: Date.now()
       };
     } else if (type === 'kick-sub') {
       mockAlert = {
         id: 'test-' + Date.now(),
         platform: 'kick',
-        type: 'subscription',
+        type: 'sub',
         user: 'KickSubMaster',
-        months: 3,
-        details: '¡Se suscribió en Kick (3 meses)! 🚀',
+        title: '¡Nueva Suscripción en Kick!',
+        months: 1,
+        details: 'se ha suscrito al canal ⭐',
+        sound: true,
+        timestamp: Date.now()
+      };
+    } else if (type === 'kick-resub') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'kick',
+        type: 'resub',
+        user: 'VeteranoKick',
+        title: '¡Renovación en Kick!',
+        months: 6,
+        details: 'renovó su suscripción (6 meses) ⭐',
+        sound: true,
         timestamp: Date.now()
       };
     } else if (type === 'kick-gift') {
@@ -205,17 +282,33 @@ io.on('connection', (socket) => {
         platform: 'kick',
         type: 'gift_sub',
         user: 'ReyDonador',
+        title: '¡Suscripciones Regaladas!',
         count: 5,
-        details: '¡Regaló 5 suscripciones en Kick! 🎁',
+        details: 'regaló 5 suscripciones en Kick 🎁',
+        sound: true,
         timestamp: Date.now()
       };
-    } else if (type === 'kick-follow') {
+    } else if (type === 'kick-kicks') {
       mockAlert = {
         id: 'test-' + Date.now(),
         platform: 'kick',
-        type: 'follow',
-        user: 'NuevoEspectadorKick',
-        details: '¡Te sigue en Kick! 🔥',
+        type: 'kicks',
+        user: 'DonadorVIP',
+        title: '¡Donación de KICKs!',
+        details: 'envió 500 KICKs 🪙',
+        sound: true,
+        timestamp: Date.now()
+      };
+    } else if (type === 'kick-host') {
+      mockAlert = {
+        id: 'test-' + Date.now(),
+        platform: 'kick',
+        type: 'host',
+        user: 'StreamerAmigo',
+        title: '¡Host en Kick!',
+        viewers: 45,
+        details: 'te está hosteando con 45 espectadores 📡',
+        sound: true,
         timestamp: Date.now()
       };
     }

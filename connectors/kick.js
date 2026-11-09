@@ -195,73 +195,134 @@ class KickConnector extends EventEmitter {
         };
 
         this.emit('chat', normalizedMessage);
+
+        // Detección de nuevo seguidor anunciado en el chat por bots (KickBot, BotRix, System, etc.)
+        const senderLower = (normalizedMessage.user || '').toLowerCase();
+        const msgText = (normalizedMessage.message || '').trim();
+        const followMatch = msgText.match(/(?:thanks\s+for\s+(?:the\s+)?follow(?:ing)?|gracias\s+por\s+seguir(?:nos)?|now\s+following)\s+@?([a-zA-Z0-9_\-\.]+)/i);
+        const isBot = ['kickbot', 'botrix', 'system'].includes(senderLower) || senderLower.includes('bot') || msgText.toLowerCase().startsWith('thanks for the follow');
+
+        if (followMatch && isBot) {
+          const followerName = followMatch[1];
+          this.emit('alert', {
+            id: 'kick-follow-' + Date.now(),
+            platform: 'kick',
+            type: 'follow',
+            user: followerName,
+            title: '¡Nuevo Seguidor en Kick!',
+            details: `comenzó a seguirte en Kick 🟢`,
+            sound: true,
+            timestamp: Date.now()
+          });
+        }
       } catch (e) {
         console.error('[KICK] Error parsing chat message:', e);
       }
     }
 
-    // Follower event
-    if (event === 'App\\Events\\FollowersUpdated') {
+    // 1. Follower event (Pusher)
+    if (event === 'App\\Events\\FollowersUpdated' || (event && event.toLowerCase().includes('follower'))) {
       try {
         const followData = typeof data === 'string' ? JSON.parse(data) : data;
+        if (followData.followed === false) return; // Dejó de seguir
+        const username = followData.username || followData.follower?.username || 'Nuevo seguidor';
         const normalizedAlert = {
           id: 'kick-follow-' + Date.now(),
           platform: 'kick',
           type: 'follow',
-          user: followData.username || 'Nuevo seguidor',
-          details: '¡Comenzó a seguir en Kick!',
+          user: username,
+          title: '¡Nuevo Seguidor en Kick!',
+          details: `comenzó a seguirte en Kick 🟢`,
+          sound: true,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       } catch (e) {}
     }
 
-    // Subscription Event
+    // 2. Suscripción y Renovación
     if (event === 'App\\Events\\SubscriptionEvent') {
       try {
         const subData = typeof data === 'string' ? JSON.parse(data) : data;
+        const username = subData.username || 'Suscriptor';
+        const months = Number(subData.months || 1);
+        const isRenewal = months > 1;
+
         const normalizedAlert = {
           id: 'kick-sub-' + Date.now(),
           platform: 'kick',
-          type: 'subscription',
-          user: subData.username || 'Suscriptor',
-          months: subData.months || 1,
-          details: `¡Se suscribió en Kick (${subData.months || 1} mes${subData.months > 1 ? 'es' : ''})!`,
+          type: isRenewal ? 'resub' : 'sub',
+          user: username,
+          title: isRenewal ? '¡Renovación en Kick!' : '¡Nueva Suscripción en Kick!',
+          months: months,
+          details: isRenewal
+            ? `renovó su suscripción (${months} meses) ⭐`
+            : `se ha suscrito al canal ⭐`,
+          sound: true,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       } catch (e) {}
     }
 
-    // Gifted Subscriptions Event
+    // 3. Subs regaladas
     if (event === 'App\\Events\\GiftedSubscriptionsEvent') {
       try {
         const giftData = typeof data === 'string' ? JSON.parse(data) : data;
+        const gifter = giftData.gifter_username || giftData.username || 'Benefactor';
         const count = giftData.gifted_usernames ? giftData.gifted_usernames.length : (giftData.count || 1);
         const normalizedAlert = {
           id: 'kick-gift-sub-' + Date.now(),
           platform: 'kick',
           type: 'gift_sub',
-          user: giftData.gifter_username || 'Benefactor',
+          user: gifter,
+          title: '¡Suscripciones Regaladas!',
           count: count,
-          details: `¡Regaló ${count} suscripción${count > 1 ? 'es' : ''} en Kick!`,
+          details: `regaló ${count} suscripción${count > 1 ? 'es' : ''} en Kick 🎁`,
+          sound: true,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       } catch (e) {}
     }
 
-    // Stream host event
-    if (event === 'App\\Events\\StreamHostEvent') {
+    // 4. KICKs / Donaciones
+    if (event.includes('Kicks') || event.includes('Donation') || event.includes('Gift')) {
+      try {
+        const kData = typeof data === 'string' ? JSON.parse(data) : data;
+        const username = kData.sender?.username || kData.username || 'Donador';
+        const amount = kData.amount || kData.kicks || 100;
+        this.emit('alert', {
+          id: 'kick-kicks-' + Date.now(),
+          platform: 'kick',
+          type: 'kicks',
+          user: username,
+          title: '¡Donación de KICKs!',
+          details: `envió ${amount} KICKs 🪙`,
+          sound: true,
+          timestamp: Date.now()
+        });
+      } catch (e) {}
+    }
+
+    // 5. Host & Raid en Kick
+    if (event === 'App\\Events\\StreamHostEvent' || event.includes('Raid') || event === 'App\\Events\\StreamRaidEvent') {
       try {
         const hostData = typeof data === 'string' ? JSON.parse(data) : data;
+        const hoster = hostData.host_username || hostData.hoster_username || hostData.raider_username || hostData.username || 'Streamer';
+        const viewers = hostData.number_viewers || hostData.viewers || 0;
+        const isRaid = event.toLowerCase().includes('raid');
         const normalizedAlert = {
           id: 'kick-host-' + Date.now(),
           platform: 'kick',
           type: 'host',
-          user: hostData.host_username || 'Host',
-          viewers: hostData.number_viewers || 0,
-          details: `¡Hospedó la transmisión con ${hostData.number_viewers || 0} espectadores!`,
+          user: hoster,
+          title: isRaid ? '¡Raid en Kick!' : '¡Host en Kick!',
+          viewers: viewers,
+          details: viewers > 0
+            ? `te está ${isRaid ? 'raideando' : 'hosteando'} con ${viewers} espectadores 📡`
+            : `te está ${isRaid ? 'raideando' : 'hosteando'} en Kick 📡`,
+          sound: true,
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);

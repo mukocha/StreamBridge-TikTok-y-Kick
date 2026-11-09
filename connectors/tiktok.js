@@ -119,8 +119,9 @@ class TikTokConnector extends EventEmitter {
         this.emit('chat', normalizedMessage);
       });
 
-      // Gifts
+      // Regalos (Gifts)
       this.connection.on('gift', (data) => {
+        // En TikTok los regalos con racha (streak) solo deben sonar y alertar al terminar la racha
         if (data.giftType === 1 && !data.repeatEnd) return;
 
         const user = data.user || {};
@@ -132,21 +133,23 @@ class TikTokConnector extends EventEmitter {
         const icon = data.giftPictureUrl || data.giftDetails?.giftImage?.url?.[0] || '';
 
         const normalizedAlert = {
-          id: 'tiktok-gift-' + Date.now(),
+          id: 'tiktok-gift-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
           platform: 'tiktok',
           type: 'gift',
           user: username,
+          title: '¡Regalo en TikTok Live!',
           giftName: giftName,
           count: count,
           diamonds: totalDiamonds,
           giftIcon: icon || null,
-          details: `¡Envió ${giftName} x${count} (${totalDiamonds} 🪙)!`,
+          details: `envió ${giftName} x${count} (${totalDiamonds} 💎)`,
+          sound: true, // SÍ lleva sonido
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       });
 
-      // Followers
+      // Nuevos seguidores
       this.connection.on('follow', (data) => {
         const user = data.user || {};
         const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Nuevo seguidor';
@@ -155,13 +158,32 @@ class TikTokConnector extends EventEmitter {
           platform: 'tiktok',
           type: 'follow',
           user: username,
-          details: `¡Comenzó a seguirte en TikTok!`,
+          title: '¡Nuevo Seguidor en TikTok!',
+          details: `comenzó a seguirte 💖`,
+          sound: true, // SÍ lleva sonido
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
       });
 
-      // Shares
+      // Suscripción LIVE en TikTok
+      this.connection.on('subscribe', (data) => {
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Suscriptor';
+        const normalizedAlert = {
+          id: 'tiktok-sub-' + Date.now(),
+          platform: 'tiktok',
+          type: 'sub',
+          user: username,
+          title: '¡Nueva Suscripción LIVE!',
+          details: `se ha suscrito al canal ⭐`,
+          sound: true, // SÍ lleva sonido
+          timestamp: Date.now()
+        };
+        this.emit('alert', normalizedAlert);
+      });
+
+      // Compartidos
       this.connection.on('share', (data) => {
         const user = data.user || {};
         const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Espectador';
@@ -170,10 +192,59 @@ class TikTokConnector extends EventEmitter {
           platform: 'tiktok',
           type: 'share',
           user: username,
-          details: `¡Compartió el directo de TikTok!`,
+          title: '¡Compartieron el LIVE!',
+          details: `compartió la transmisión 🚀`,
+          sound: false, // SILENCIOSO para no saturar
           timestamp: Date.now()
         };
         this.emit('alert', normalizedAlert);
+      });
+
+      // Likes (Acumulador inteligente por usuario para evitar spam sonoro de miles de toques)
+      const likeBatches = new Map();
+      this.connection.on('like', (data) => {
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Espectador';
+        const count = Number(data.likeCount || 1);
+
+        const current = likeBatches.get(username) || { total: 0, timer: null };
+        current.total += count;
+
+        if (current.timer) clearTimeout(current.timer);
+
+        current.timer = setTimeout(() => {
+          likeBatches.delete(username);
+          if (current.total >= 10) { // Solo notificar si dio 10 o más likes acumulados
+            this.emit('alert', {
+              id: 'tiktok-like-' + Date.now(),
+              platform: 'tiktok',
+              type: 'like',
+              user: username,
+              title: '¡Likes en TikTok!',
+              details: `envió ${current.total} likes ❤️`,
+              sound: false, // SILENCIOSO (no interrumpe el directo)
+              timestamp: Date.now()
+            });
+          }
+        }, 5000);
+
+        likeBatches.set(username, current);
+      });
+
+      // Nuevos espectadores que entran a la sala (Member)
+      this.connection.on('member', (data) => {
+        const user = data.user || {};
+        const username = user.nickname || user.uniqueId || data.nickname || data.uniqueId || 'Espectador';
+        this.emit('alert', {
+          id: 'tiktok-member-' + Date.now(),
+          platform: 'tiktok',
+          type: 'member',
+          user: username,
+          title: 'Nuevo espectador',
+          details: `se unió al directo 👋`,
+          sound: false, // SILENCIOSO (solo registro en dock/panel)
+          timestamp: Date.now()
+        });
       });
 
       // Connect

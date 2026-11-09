@@ -79,28 +79,37 @@ function playAlertSound() {
 }
 
 function showAlert(alert) {
-  playAlertSound();
-  launchConfetti(alert.platform === 'kick' ? '#53fc18' : '#fe2c55');
-
-  const card = document.createElement('div');
-  card.className = `alert-card ${alert.platform}-alert`;
-
-  let iconSvg = '';
-  if (alert.type === 'gift' || alert.type === 'gift_sub') {
-    iconSvg = '🎁';
-  } else if (alert.type === 'subscription') {
-    iconSvg = '⭐';
-  } else if (alert.type === 'follow') {
-    iconSvg = '❤️';
-  } else {
-    iconSvg = '🎉';
+  // Solo reproducir sonido si la alerta no está marcada como silenciosa (ej. likes o miembros)
+  if (alert.sound !== false) {
+    playAlertSound();
   }
 
-  let title = escapeHtml(alert.user);
+  // Confeti para eventos importantes (Regalos, Subs, Kicks, Hosts)
+  const isBigEvent = ['gift', 'gift_sub', 'sub', 'resub', 'kicks', 'host'].includes(alert.type);
+  if (isBigEvent) {
+    launchConfetti(alert.platform === 'kick' ? '#53fc18' : '#fe2c55');
+  }
+
+  const card = document.createElement('div');
+  card.className = `alert-card ${alert.platform}-alert alert-type-${alert.type}`;
+
+  let iconSvg = '🎉';
+  if (alert.type === 'gift' || alert.type === 'gift_sub') iconSvg = '🎁';
+  else if (alert.type === 'sub') iconSvg = '⭐';
+  else if (alert.type === 'resub') iconSvg = '🔄';
+  else if (alert.type === 'kicks') iconSvg = '🪙';
+  else if (alert.type === 'host') iconSvg = '📡';
+  else if (alert.type === 'follow') iconSvg = '💖';
+  else if (alert.type === 'like') iconSvg = '❤️';
+  else if (alert.type === 'share') iconSvg = '🚀';
+  else if (alert.type === 'member') iconSvg = '👋';
+
+  let title = escapeHtml(alert.user || 'Anónimo');
+  let headerTitle = escapeHtml(alert.title || alert.platform.toUpperCase());
   let subtitle = escapeHtml(alert.details || '');
 
   card.innerHTML = `
-    <span class="alert-badge ${alert.platform}">${alert.platform.toUpperCase()}</span>
+    <span class="alert-badge ${alert.platform}">${headerTitle}</span>
     <div class="alert-icon-container">
       ${alert.giftIcon ? `<img class="alert-icon" src="${escapeHtml(alert.giftIcon)}" />` : `<span style="font-size: 38px;">${iconSvg}</span>`}
     </div>
@@ -113,13 +122,18 @@ function showAlert(alert) {
   alertWrapper.innerHTML = '';
   alertWrapper.appendChild(card);
 
+  // Likes y Members duran menos en pantalla para no saturar
+  const duration = (alert.type === 'like' || alert.type === 'member')
+    ? 2500
+    : (settings.alertDuration || 5000);
+
   setTimeout(() => {
     card.classList.add('exit');
     setTimeout(() => {
       card.remove();
       processQueue();
     }, 500);
-  }, settings.alertDuration || 5000);
+  }, duration);
 }
 
 // Particle confetti engine
