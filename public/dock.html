@@ -155,6 +155,7 @@
 
     /* Mensajes de Chat Minimalistas */
     .chat-line {
+      flex-shrink: 0 !important;
       padding: 4px 6px;
       font-size: 13px;
       line-height: 1.4;
@@ -199,19 +200,21 @@
       display: inline-block;
     }
 
-    /* Alertas dentro del Chat (Ultra llamativas y destacadas) */
+    /* Alertas dentro del Chat (Ultra llamativas, NUNCA comprimidas) */
     .alert-line {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      padding: 8px 12px;
-      margin: 6px 0;
-      border-radius: 8px;
+      gap: 4px;
+      padding: 7px 10px;
+      margin: 5px 0;
+      border-radius: 6px;
       font-size: 12px;
-      line-height: 1.4;
+      line-height: 1.35;
       position: relative;
-      overflow: hidden;
-      animation: alertPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      flex-shrink: 0 !important;
+      min-height: fit-content !important;
+      overflow: visible !important;
+      animation: alertPop 0.3s ease;
     }
 
     .alert-line::before {
@@ -221,12 +224,14 @@
       top: 0;
       bottom: 0;
       width: 4px;
+      border-top-left-radius: 6px;
+      border-bottom-left-radius: 6px;
     }
 
     .alert-line.kick {
-      background: linear-gradient(135deg, rgba(83, 252, 24, 0.18) 0%, rgba(13, 19, 33, 0.95) 100%);
-      border: 1px solid rgba(83, 252, 24, 0.4);
-      box-shadow: 0 3px 14px rgba(83, 252, 24, 0.2);
+      background: linear-gradient(135deg, rgba(83, 252, 24, 0.18) 0%, rgba(13, 19, 33, 0.98) 100%);
+      border: 1px solid rgba(83, 252, 24, 0.5);
+      box-shadow: 0 2px 10px rgba(83, 252, 24, 0.22);
     }
     .alert-line.kick::before {
       background: #53fc18;
@@ -234,9 +239,9 @@
     }
 
     .alert-line.tiktok {
-      background: linear-gradient(135deg, rgba(254, 44, 85, 0.2) 0%, rgba(13, 19, 33, 0.95) 100%);
-      border: 1px solid rgba(254, 44, 85, 0.4);
-      box-shadow: 0 3px 14px rgba(254, 44, 85, 0.22);
+      background: linear-gradient(135deg, rgba(254, 44, 85, 0.2) 0%, rgba(13, 19, 33, 0.98) 100%);
+      border: 1px solid rgba(254, 44, 85, 0.5);
+      box-shadow: 0 2px 10px rgba(254, 44, 85, 0.22);
     }
     .alert-line.tiktok::before {
       background: #fe2c55;
@@ -255,47 +260,37 @@
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      padding: 2px 7px;
+      padding: 2px 6px;
       border-radius: 4px;
       display: inline-flex;
       align-items: center;
       gap: 4px;
     }
     .alert-line.kick .alert-badge {
-      background: rgba(83, 252, 24, 0.25);
+      background: rgba(83, 252, 24, 0.28);
       color: #53fc18;
-      border: 1px solid rgba(83, 252, 24, 0.5);
+      border: 1px solid rgba(83, 252, 24, 0.55);
     }
     .alert-line.tiktok .alert-badge {
-      background: rgba(254, 44, 85, 0.25);
+      background: rgba(254, 44, 85, 0.28);
       color: #ff5476;
-      border: 1px solid rgba(254, 44, 85, 0.5);
+      border: 1px solid rgba(254, 44, 85, 0.55);
     }
 
     .alert-body {
       display: flex;
       align-items: center;
-      gap: 10px;
-    }
-
-    .alert-big-icon {
-      font-size: 22px;
-      line-height: 1;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-      animation: iconPulse 2s infinite ease-in-out;
-    }
-
-    @keyframes iconPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.15); }
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      padding-left: 2px;
     }
 
     .alert-user-name {
       font-size: 13px;
       font-weight: 800;
       color: #ffffff;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-      margin-right: 4px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
     }
 
     .alert-details-text {
@@ -312,9 +307,8 @@
     }
 
     @keyframes alertPop {
-      0% { opacity: 0; transform: translateY(-6px) scale(0.96); }
-      60% { transform: translateY(0) scale(1.02); }
-      100% { opacity: 1; transform: scale(1); }
+      0% { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -333,7 +327,8 @@
     </div>
 
     <div class="actions-group">
-      <button class="btn-mode sound" id="btn-dock-sound" onclick="toggleDockSound()" title="Sonido de alertas activado. Haz clic para probar o silenciar">🔊 Sonido</button>
+      <button class="btn-mode sound" id="btn-dock-test" onclick="playDockAlertSound(true)" title="Probar sonido de alertas directamente en OBS">🔊 Probar</button>
+      <button class="btn-mode normal" id="btn-dock-sound" onclick="toggleDockSound()" title="Activar o silenciar sonido de alertas en OBS">🔔</button>
       <button class="btn-mode normal" id="btn-slow-mode" onclick="toggleSlowMode()" title="Alternar entre modo normal y modo lento para chats rápidos">⚡ Normal</button>
       <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
     </div>
@@ -383,7 +378,7 @@
       soundEnabled = !soundEnabled;
       updateDockSoundButton();
       if (soundEnabled) {
-        playDockAlertSound(true); // Prueba de audio inmediata al hacer clic
+        playDockAlertSound(true);
       }
     }
 
@@ -391,11 +386,11 @@
       const btn = document.getElementById('btn-dock-sound');
       if (!btn) return;
       if (soundEnabled) {
-        btn.textContent = '🔊 Sonido';
-        btn.className = 'btn-mode sound';
+        btn.textContent = '🔔';
+        btn.className = 'btn-mode normal';
         btn.title = 'Sonido de alertas ACTIVADO en OBS. Haz clic para silenciar';
       } else {
-        btn.textContent = '🔇 Mudo';
+        btn.textContent = '🔕';
         btn.className = 'btn-mode sound muted';
         btn.title = 'Sonido de alertas SILENCIADO en OBS. Haz clic para activar';
       }
@@ -592,11 +587,8 @@
           <span class="alert-time">${timeStr}</span>
         </div>
         <div class="alert-body">
-          <span class="alert-big-icon">${icon}</span>
-          <div>
-            <span class="alert-user-name">${escapeHtml(alert.user)}</span>
-            <span class="alert-details-text">${escapeHtml(alert.details || '')}</span>
-          </div>
+          <strong class="alert-user-name">${escapeHtml(alert.user)}</strong>
+          <span class="alert-details-text">${escapeHtml(alert.details || '')}</span>
         </div>
       `;
 
