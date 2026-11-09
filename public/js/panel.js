@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('link-chat').textContent = `${origin}/chat`;
   document.getElementById('link-alerts').textContent = `${origin}/alerts`;
   document.getElementById('link-viewers').textContent = `${origin}/viewers`;
-  document.getElementById('link-dock').textContent = `${origin}/dock`;
+  document.getElementById('link-dock').textContent = `${origin}/dock?v=1.3`;
 });
 
 const panelKickViewers = document.getElementById('panel-viewers-kick');

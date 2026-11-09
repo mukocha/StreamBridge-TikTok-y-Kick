@@ -202,17 +202,17 @@
 
     /* Alertas dentro del Chat (Ultra llamativas, NUNCA comprimidas) */
     .alert-line {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 7px 10px;
-      margin: 5px 0;
-      border-radius: 6px;
-      font-size: 12px;
-      line-height: 1.35;
-      position: relative;
+      display: block !important;
+      padding: 8px 10px !important;
+      margin: 6px 0 !important;
+      border-radius: 6px !important;
+      font-size: 13px !important;
+      line-height: 1.45 !important;
+      position: relative !important;
       flex-shrink: 0 !important;
-      min-height: fit-content !important;
+      min-height: 52px !important;
+      max-height: none !important;
+      box-sizing: border-box !important;
       overflow: visible !important;
       animation: alertPop 0.3s ease;
     }
@@ -229,9 +229,9 @@
     }
 
     .alert-line.kick {
-      background: linear-gradient(135deg, rgba(83, 252, 24, 0.18) 0%, rgba(13, 19, 33, 0.98) 100%);
-      border: 1px solid rgba(83, 252, 24, 0.5);
-      box-shadow: 0 2px 10px rgba(83, 252, 24, 0.22);
+      background: linear-gradient(135deg, rgba(83, 252, 24, 0.22) 0%, rgba(13, 19, 33, 0.98) 100%) !important;
+      border: 1px solid rgba(83, 252, 24, 0.6) !important;
+      box-shadow: 0 2px 12px rgba(83, 252, 24, 0.25) !important;
     }
     .alert-line.kick::before {
       background: #53fc18;
@@ -239,9 +239,9 @@
     }
 
     .alert-line.tiktok {
-      background: linear-gradient(135deg, rgba(254, 44, 85, 0.2) 0%, rgba(13, 19, 33, 0.98) 100%);
-      border: 1px solid rgba(254, 44, 85, 0.5);
-      box-shadow: 0 2px 10px rgba(254, 44, 85, 0.22);
+      background: linear-gradient(135deg, rgba(254, 44, 85, 0.24) 0%, rgba(13, 19, 33, 0.98) 100%) !important;
+      border: 1px solid rgba(254, 44, 85, 0.6) !important;
+      box-shadow: 0 2px 12px rgba(254, 44, 85, 0.25) !important;
     }
     .alert-line.tiktok::before {
       background: #fe2c55;
@@ -249,10 +249,12 @@
     }
 
     .alert-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 6px !important;
+      margin-bottom: 5px !important;
+      width: 100% !important;
     }
 
     .alert-badge {
@@ -267,23 +269,25 @@
       gap: 4px;
     }
     .alert-line.kick .alert-badge {
-      background: rgba(83, 252, 24, 0.28);
+      background: rgba(83, 252, 24, 0.3);
       color: #53fc18;
-      border: 1px solid rgba(83, 252, 24, 0.55);
+      border: 1px solid rgba(83, 252, 24, 0.6);
     }
     .alert-line.tiktok .alert-badge {
-      background: rgba(254, 44, 85, 0.28);
+      background: rgba(254, 44, 85, 0.3);
       color: #ff5476;
-      border: 1px solid rgba(254, 44, 85, 0.55);
+      border: 1px solid rgba(254, 44, 85, 0.6);
     }
 
     .alert-body {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      font-size: 12px;
-      padding-left: 2px;
+      display: block !important;
+      width: 100% !important;
+      font-size: 13px !important;
+      line-height: 1.4 !important;
+      color: #f1f5f9 !important;
+      word-break: break-word !important;
+      white-space: normal !important;
+      padding-left: 2px !important;
     }
 
     .alert-user-name {
@@ -291,6 +295,7 @@
       font-weight: 800;
       color: #ffffff;
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      margin-right: 6px;
     }
 
     .alert-details-text {
@@ -331,6 +336,7 @@
       <button class="btn-mode normal" id="btn-dock-sound" onclick="toggleDockSound()" title="Activar o silenciar sonido de alertas en OBS">🔔</button>
       <button class="btn-mode normal" id="btn-slow-mode" onclick="toggleSlowMode()" title="Alternar entre modo normal y modo lento para chats rápidos">⚡ Normal</button>
       <button class="btn-clear" onclick="clearFeed()">Limpiar</button>
+      <span style="font-size: 10px; color: #475569; font-weight: bold; padding: 2px 4px; border-radius: 3px; background: rgba(255,255,255,0.05);" title="Versión de StreamBridge">v1.3</span>
     </div>
   </div>
 
@@ -587,7 +593,7 @@
           <span class="alert-time">${timeStr}</span>
         </div>
         <div class="alert-body">
-          <strong class="alert-user-name">${escapeHtml(alert.user)}</strong>
+          <strong class="alert-user-name">${escapeHtml(alert.user)}:</strong>
           <span class="alert-details-text">${escapeHtml(alert.details || '')}</span>
         </div>
       `;
