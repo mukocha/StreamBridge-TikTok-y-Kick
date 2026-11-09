@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamBridge - Chat & Alertas TikTok y Kick</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-area">
+        <div class="logo-badge">⚡ TK</div>
+        <div>
+          <h1>StreamBridge Live</h1>
+          <div class="subtitle">Chat unificado y alertas para TikTok y Kick en OBS Studio</div>
+        </div>
+      </div>
+      <div>
+        <a href="/dock" target="_blank" style="text-decoration: none;">
+          <button class="btn-secondary" style="font-size: 13px;">🖥️ Abrir Dock de OBS</button>
+        </a>
+      </div>
+    </header>
+
+    <!-- Channels Connection Grid -->
+    <div class="dashboard-grid">
+      <!-- Kick Connection Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="platform-title">
+            <span>Kick Live</span>
+            <span class="kick-pill">KICK</span>
+          </div>
+          <div class="status-indicator">
+            <span class="status-dot" id="kick-status-dot"></span>
+            <span id="kick-status-text">Desconectado</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <input type="text" id="kick-user-input" placeholder="Nombre de tu canal en Kick (ej. westcol)">
+          <button class="btn-kick" id="kick-connect-btn">Conectar</button>
+          <button class="btn-danger" id="kick-disconnect-btn" style="display: none;">Desconectar</button>
+        </div>
+        <div class="status-message" id="kick-status-msg"></div>
+      </div>
+
+      <!-- TikTok Connection Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="platform-title">
+            <span>TikTok Live</span>
+            <span class="tiktok-pill">TIKTOK</span>
+          </div>
+          <div class="status-indicator">
+            <span class="status-dot" id="tiktok-status-dot"></span>
+            <span id="tiktok-status-text">Desconectado</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <input type="text" id="tiktok-user-input" placeholder="Tu usuario de TikTok (ej. @tuusuario)">
+          <button class="btn-tiktok" id="tiktok-connect-btn">Conectar</button>
+          <button class="btn-danger" id="tiktok-disconnect-btn" style="display: none;">Desconectar</button>
+        </div>
+        <div class="status-message" id="tiktok-status-msg"></div>
+      </div>
+    </div>
+
+    <!-- OBS Browser Sources Section -->
+    <div class="card obs-section">
+      <div class="card-header">
+        <div class="platform-title">
+          <span>📺 Enlaces para OBS Studio</span>
+        </div>
+        <span style="font-size: 12px; color: var(--text-secondary);">Agrega cada enlace como "Navegador" en OBS</span>
+      </div>
+
+      <div class="url-box">
+        <div class="url-info">
+          <span class="url-title">💬 Chat Unificado (Overlay transparente)</span>
+          <span class="url-link" id="link-chat">http://localhost:3000/chat</span>
+        </div>
+        <button class="copy-btn" onclick="copyUrl('link-chat')">📋 Copiar Enlace</button>
+      </div>
+
+      <div class="url-box">
+        <div class="url-info">
+          <span class="url-title">🔔 Alertas (Regalos, Subs, Seguidores con sonido y animación)</span>
+          <span class="url-link" id="link-alerts">http://localhost:3000/alerts</span>
+        </div>
+        <button class="copy-btn" onclick="copyUrl('link-alerts')">📋 Copiar Enlace</button>
+      </div>
+
+      <div class="url-box">
+        <div class="url-info">
+          <span class="url-title">🎛️ Panel Dock de OBS (Para anclar dentro de OBS Studio)</span>
+          <span class="url-link" id="link-dock">http://localhost:3000/dock</span>
+        </div>
+        <button class="copy-btn" onclick="copyUrl('link-dock')">📋 Copiar Enlace</button>
+      </div>
+    </div>
+
+    <!-- Testing & Preview Grid -->
+    <div class="dashboard-grid">
+      <!-- Simulator Buttons -->
+      <div class="card">
+        <div class="card-header">
+          <div class="platform-title">
+            <span>🧪 Simulador de Alertas y Chat</span>
+          </div>
+          <span style="font-size: 12px; color: var(--text-secondary);">Prueba tus overlays en OBS</span>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Alertas de TikTok:</div>
+        <div class="test-bar" style="margin-top: 0; margin-bottom: 16px;">
+          <button class="test-btn" onclick="testAlert('tiktok-gift')">🎁 Regalo TikTok</button>
+          <button class="test-btn" onclick="testAlert('tiktok-follow')">🌟 Seguidor TikTok</button>
+          <button class="test-btn" onclick="testChat('tiktok')">💬 Chat TikTok</button>
+        </div>
+
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Alertas de Kick:</div>
+        <div class="test-bar" style="margin-top: 0;">
+          <button class="test-btn" onclick="testAlert('kick-sub')">⭐ Suscripción Kick</button>
+          <button class="test-btn" onclick="testAlert('kick-gift')">🎁 Regalo de Subs Kick</button>
+          <button class="test-btn" onclick="testAlert('kick-follow')">❤️ Seguidor Kick</button>
+          <button class="test-btn" onclick="testChat('kick')">💬 Chat Kick</button>
+        </div>
+      </div>
+
+      <!-- Live Chat Preview -->
+      <div class="card">
+        <div class="card-header">
+          <div class="platform-title">
+            <span>👀 Vista previa del Chat</span>
+          </div>
+          <button class="btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="previewBox.innerHTML=''">Limpiar</button>
+        </div>
+
+        <div class="preview-container" id="preview-messages">
+          <div style="color: #64748b; font-size: 13px; text-align: center; margin-top: 80px;">
+            Los mensajes entrantes de TikTok y Kick aparecerán aquí en vivo...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/js/panel.js"></script>
+</body>
+</html>

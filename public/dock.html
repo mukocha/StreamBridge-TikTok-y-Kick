@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>OBS Dock - Chat & Panel</title>
+  <link rel="stylesheet" href="/css/chat.css">
+  <style>
+    body {
+      background: #0f172a;
+      padding: 10px;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .dock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #1e293b;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .status-group {
+      display: flex;
+      gap: 12px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot.connected { background: #10b981; box-shadow: 0 0 6px #10b981; }
+    .dot.disconnected { background: #ef4444; }
+    .dot.connecting { background: #f59e0b; }
+    .btn-clear {
+      background: #334155;
+      color: #94a3b8;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .btn-clear:hover {
+      background: #475569;
+      color: #fff;
+    }
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      max-height: calc(100vh - 60px);
+      mask-image: none;
+      -webkit-mask-image: none;
+    }
+    .chat-message {
+      max-width: 100%;
+      margin-bottom: 6px;
+      font-size: 14px;
+      padding: 8px 10px;
+    }
+  </style>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="dock-header">
+    <div class="status-group">
+      <span class="pill" id="kick-dock-status">
+        <span class="dot disconnected" id="kick-dot"></span> Kick
+      </span>
+      <span class="pill" id="tiktok-dock-status">
+        <span class="dot disconnected" id="tiktok-dot"></span> TikTok
+      </span>
+    </div>
+    <button class="btn-clear" onclick="clearDockChat()">Limpiar</button>
+  </div>
+  <div id="chat-container"></div>
+  <script src="/js/chat.js"></script>
+  <script>
+    socket.on('init', ({ state }) => {
+      updateDockStatus('kick', state.kick.status);
+      updateDockStatus('tiktok', state.tiktok.status);
+    });
+    socket.on('status:update', (data) => {
+      updateDockStatus(data.platform, data.status);
+    });
+    function updateDockStatus(platform, status) {
+      const dot = document.getElementById(`${platform}-dot`);
+      if (!dot) return;
+      dot.className = `dot ${status}`;
+    }
+    function clearDockChat() {
+      document.getElementById('chat-container').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
