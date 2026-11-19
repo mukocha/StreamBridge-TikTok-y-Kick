@@ -488,6 +488,8 @@
 
     function clearFeed() {
       feed.innerHTML = '';
+      slowQueue = [];
+      socket.emit('chat:clear');
     }
 
     function updateDockViewers(v) {
@@ -650,6 +652,11 @@
 
     socket.on('chat:message', (msg) => {
       addChatMessage(msg);
+    });
+
+    socket.on('chat:cleared', () => {
+      feed.innerHTML = '';
+      slowQueue = [];
     });
 
     socket.on('alert:event', (alert) => {

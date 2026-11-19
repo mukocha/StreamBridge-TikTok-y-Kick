@@ -29,6 +29,10 @@ socket.on('settings:update', (newSettings) => {
   settings = { ...settings, ...newSettings };
 });
 
+socket.on('chat:cleared', () => {
+  queue.length = 0;
+});
+
 socket.on('alert:event', (alert) => {
   queue.push(alert);
   if (!isPlaying) {

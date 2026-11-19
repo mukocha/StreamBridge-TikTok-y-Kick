@@ -101,6 +101,14 @@ app.get('/dock', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dock
 app.get('/panel', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/viewers', (req, res) => res.sendFile(path.join(__dirname, 'public', 'viewers.html')));
 
+// Endpoint para limpiar historial de chat y alertas
+app.post('/api/clear', (req, res) => {
+  recentMessages.length = 0;
+  alertHistory.length = 0;
+  io.emit('chat:cleared');
+  res.json({ ok: true, message: 'Chat limpiado con éxito' });
+});
+
 // Kick events
 kick.on('status', (info) => {
   state.kick.status = info.status;
@@ -354,6 +362,14 @@ io.on('connection', (socket) => {
   socket.on('settings:update', (newSettings) => {
     state.settings = { ...state.settings, ...newSettings };
     io.emit('settings:update', state.settings);
+  });
+
+  // Limpiar chat y alertas en servidor y en todas las pantallas/docks
+  socket.on('chat:clear', () => {
+    recentMessages.length = 0;
+    alertHistory.length = 0;
+    io.emit('chat:cleared');
+    console.log('[Chat] Historial limpiado por el streamer (recientes y alertas reseteados).');
   });
 });
 

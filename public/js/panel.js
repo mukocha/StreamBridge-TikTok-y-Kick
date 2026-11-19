@@ -76,6 +76,15 @@ socket.on('init', ({ state, recentMessages }) => {
   }
 });
 
+function clearAllChat() {
+  previewBox.innerHTML = '';
+  socket.emit('chat:clear');
+}
+
+socket.on('chat:cleared', () => {
+  previewBox.innerHTML = '';
+});
+
 socket.on('settings:update', (newSettings) => {
   applySettingsUI(newSettings);
 });

@@ -17,6 +17,11 @@ socket.on('init', ({ state, recentMessages }) => {
   }
 });
 
+socket.on('chat:cleared', () => {
+  chatContainer.innerHTML = '';
+  slowQueue = [];
+});
+
 socket.on('settings:update', (newSettings) => {
   applySettings(newSettings);
 });
