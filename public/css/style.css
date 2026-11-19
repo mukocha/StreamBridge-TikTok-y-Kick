@@ -148,6 +148,11 @@ h1 {
   box-shadow: 0 0 8px #f59e0b;
 }
 
+.status-dot.offline {
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
 .status-dot.error {
   background: #ef4444;
 }

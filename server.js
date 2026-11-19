@@ -20,15 +20,54 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
+// Configuración persistente (config.json o variables de entorno)
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+function loadConfig() {
+  const defaults = {
+    kickUser: process.env.KICK_USER || '',
+    tiktokUser: process.env.TIKTOK_USER || '',
+    autoConnect: true
+  };
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      return {
+        ...defaults,
+        ...data,
+        kickUser: process.env.KICK_USER || data.kickUser || '',
+        tiktokUser: process.env.TIKTOK_USER || data.tiktokUser || ''
+      };
+    }
+  } catch (err) {
+    console.warn('[Config] Error leyendo config.json:', err.message);
+  }
+  return defaults;
+}
+
+function saveConfig(cfg) {
+  try {
+    const current = loadConfig();
+    const updated = { ...current, ...cfg };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2), 'utf8');
+    console.log('[Config] Configuración guardada en config.json');
+    return updated;
+  } catch (err) {
+    console.error('[Config] Error guardando config.json:', err.message);
+  }
+}
+
+const config = loadConfig();
+
 // State
 const state = {
   kick: {
-    user: process.env.KICK_USER || 'chamukoi',
+    user: config.kickUser || '',
     status: 'disconnected',
     message: 'No conectado'
   },
   tiktok: {
-    user: process.env.TIKTOK_USER || '',
+    user: config.tiktokUser || '',
     status: 'disconnected',
     message: 'No conectado'
   },
@@ -109,11 +148,83 @@ app.post('/api/clear', (req, res) => {
   res.json({ ok: true, message: 'Chat limpiado con éxito' });
 });
 
+// Manejadores y Watchers de conexión persistente
+let kickManualDisconnect = false;
+let tiktokWatcherTimer = null;
+let tiktokManualDisconnect = false;
+
+async function connectKick(username) {
+  if (!username) return;
+  const clean = username.trim().replace(/^@/, '');
+  state.kick.user = clean;
+  kickManualDisconnect = false;
+  await kick.connect(clean);
+}
+
+async function checkAndConnectTikTok(username) {
+  if (tiktokManualDisconnect) return;
+  if (!username) return;
+  if (tiktok.isConnected) return;
+
+  const clean = username.trim().replace(/^@/, '');
+  try {
+    const liveInfo = await tiktok.checkIsLive(clean);
+    if (liveInfo && liveInfo.isLive) {
+      console.log(`[TikTok Watcher] 🔴 ¡Directo detectado en @${clean}! Conectando automáticamente...`);
+      state.tiktok.status = 'connecting';
+      state.tiktok.message = `Directo detectado. Conectando a @${clean}...`;
+      io.emit('status:update', { platform: 'tiktok', ...state.tiktok });
+      await tiktok.connect(clean);
+    } else {
+      if (state.tiktok.status !== 'offline') {
+        state.tiktok.status = 'offline';
+        state.tiktok.message = `@${clean} no está en directo. Esperando transmisión...`;
+        io.emit('status:update', { platform: 'tiktok', ...state.tiktok });
+      }
+    }
+  } catch (err) {
+    console.warn('[TikTok Watcher] Comprobación:', err.message);
+  }
+}
+
+function startTikTokWatcher(username) {
+  stopTikTokWatcher();
+  if (!username) return;
+  tiktokManualDisconnect = false;
+  state.tiktok.user = username.trim().replace(/^@/, '');
+
+  checkAndConnectTikTok(state.tiktok.user);
+
+  // Comprobar cada 20 segundos si el streamer inició directo
+  tiktokWatcherTimer = setInterval(() => {
+    if (!tiktok.isConnected && !tiktokManualDisconnect && state.tiktok.user) {
+      checkAndConnectTikTok(state.tiktok.user);
+    }
+  }, 20000);
+}
+
+function stopTikTokWatcher() {
+  tiktokManualDisconnect = true;
+  if (tiktokWatcherTimer) {
+    clearInterval(tiktokWatcherTimer);
+    tiktokWatcherTimer = null;
+  }
+}
+
 // Kick events
 kick.on('status', (info) => {
   state.kick.status = info.status;
   state.kick.message = info.message;
   io.emit('status:update', { platform: 'kick', ...info });
+
+  if (info.status === 'disconnected' && !kickManualDisconnect && state.kick.user) {
+    console.log('[Kick] Desconexión detectada. Reintentando en 10s...');
+    setTimeout(() => {
+      if (!kick.isConnected && !kickManualDisconnect && state.kick.user) {
+        connectKick(state.kick.user);
+      }
+    }, 10000);
+  }
 });
 
 kick.on('chat', (message) => {
@@ -137,6 +248,16 @@ tiktok.on('status', (info) => {
   state.tiktok.status = info.status;
   state.tiktok.message = info.message;
   io.emit('status:update', { platform: 'tiktok', ...info });
+
+  if ((info.status === 'offline' || info.status === 'disconnected') && !tiktokManualDisconnect && state.tiktok.user) {
+    setTimeout(() => {
+      if (!tiktok.isConnected && !tiktokManualDisconnect) {
+        state.tiktok.status = 'offline';
+        state.tiktok.message = `@${state.tiktok.user} no está en directo. Esperando transmisión...`;
+        io.emit('status:update', { platform: 'tiktok', ...state.tiktok });
+      }
+    }, 5000);
+  }
 });
 
 tiktok.on('chat', (message) => {
@@ -172,27 +293,43 @@ io.on('connection', (socket) => {
   });
 
   // Connect request from panel
-  socket.on('channel:connect', async ({ platform, username, apiKey }) => {
+  socket.on('channel:connect', async ({ platform, username }) => {
     if (platform === 'kick') {
-      state.kick.user = username;
-      await kick.connect(username);
+      const clean = (username || '').trim().replace(/^@/, '');
+      if (clean) {
+        state.kick.user = clean;
+        saveConfig({ kickUser: clean });
+        connectKick(clean);
+      }
     } else if (platform === 'tiktok') {
-      state.tiktok.user = username;
-      await tiktok.connect(username, { signApiKey: apiKey || process.env.TIKTOK_SIGN_API_KEY });
+      const clean = (username || '').trim().replace(/^@/, '');
+      if (clean) {
+        state.tiktok.user = clean;
+        saveConfig({ tiktokUser: clean });
+        startTikTokWatcher(clean);
+      }
     }
   });
 
   // Disconnect request
   socket.on('channel:disconnect', ({ platform }) => {
     if (platform === 'kick') {
+      kickManualDisconnect = true;
       kick.disconnect();
       state.kick.status = 'disconnected';
       state.kick.message = 'Desconectado manualmente';
+      state.viewers.kick = 0;
+      state.viewers.total = (state.viewers.tiktok || 0);
+      io.emit('viewers:update', state.viewers);
       io.emit('status:update', { platform: 'kick', status: 'disconnected', message: 'Desconectado' });
     } else if (platform === 'tiktok') {
+      stopTikTokWatcher();
       tiktok.disconnect();
       state.tiktok.status = 'disconnected';
       state.tiktok.message = 'Desconectado manualmente';
+      state.viewers.tiktok = 0;
+      state.viewers.total = (state.viewers.kick || 0);
+      io.emit('viewers:update', state.viewers);
       io.emit('status:update', { platform: 'tiktok', status: 'disconnected', message: 'Desconectado' });
     }
   });
@@ -373,12 +510,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// Auto-connect if environment variables are supplied
-if (state.kick.user) {
-  kick.connect(state.kick.user);
+// Auto-conectar al iniciar el servidor con los canales guardados
+if (config.kickUser) {
+  console.log(`[Inicio] Auto-conectando a Kick: ${config.kickUser}`);
+  connectKick(config.kickUser);
 }
-if (state.tiktok.user) {
-  tiktok.connect(state.tiktok.user);
+if (config.tiktokUser) {
+  console.log(`[Inicio] Activando monitor automático para TikTok: @${config.tiktokUser}`);
+  startTikTokWatcher(config.tiktokUser);
 }
 
 server.listen(PORT, () => {

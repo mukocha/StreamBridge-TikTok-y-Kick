@@ -33,13 +33,23 @@ const tiktokMsg = document.getElementById('tiktok-status-msg');
 const previewBox = document.getElementById('preview-messages');
 const toast = document.getElementById('toast');
 
-// Auto populate URLs with current host
+// Auto populate URLs with current host and saved usernames
 document.addEventListener('DOMContentLoaded', () => {
   const origin = window.location.origin;
   document.getElementById('link-chat').textContent = `${origin}/chat`;
   document.getElementById('link-alerts').textContent = `${origin}/alerts`;
   document.getElementById('link-viewers').textContent = `${origin}/viewers`;
   document.getElementById('link-dock').textContent = `${origin}/dock?v=1.3`;
+
+  const savedKick = localStorage.getItem('streambridge_kick_user');
+  if (savedKick && !kickInput.value) {
+    kickInput.value = savedKick;
+    updateKickHelperLink();
+  }
+  const savedTikTok = localStorage.getItem('streambridge_tiktok_user');
+  if (savedTikTok && !tiktokInput.value) {
+    tiktokInput.value = savedTikTok;
+  }
 });
 
 const panelKickViewers = document.getElementById('panel-viewers-kick');
@@ -62,12 +72,24 @@ socket.on('init', ({ state, recentMessages }) => {
     applySettingsUI(state.settings);
   }
   if (state.kick) {
-    kickInput.value = state.kick.user || '';
+    if (state.kick.user) {
+      kickInput.value = state.kick.user;
+      localStorage.setItem('streambridge_kick_user', state.kick.user);
+    } else {
+      const savedKick = localStorage.getItem('streambridge_kick_user');
+      if (savedKick) kickInput.value = savedKick;
+    }
     updateKickHelperLink();
     updatePlatformUI('kick', state.kick.status, state.kick.message);
   }
   if (state.tiktok) {
-    tiktokInput.value = state.tiktok.user || '';
+    if (state.tiktok.user) {
+      tiktokInput.value = state.tiktok.user;
+      localStorage.setItem('streambridge_tiktok_user', state.tiktok.user);
+    } else {
+      const savedTikTok = localStorage.getItem('streambridge_tiktok_user');
+      if (savedTikTok) tiktokInput.value = savedTikTok;
+    }
     updatePlatformUI('tiktok', state.tiktok.status, state.tiktok.message);
   }
   if (Array.isArray(recentMessages)) {
@@ -110,10 +132,13 @@ function updatePlatformUI(platform, status, message) {
   const btnDisconnect = isKick ? kickDisconnectBtn : tiktokDisconnectBtn;
 
   dot.className = `status-dot ${status}`;
-  text.textContent = status === 'connected' ? 'En Vivo' : status === 'connecting' ? 'Conectando...' : 'Desconectado';
+  text.textContent = status === 'connected' ? 'En Vivo'
+                   : status === 'connecting' ? 'Conectando...'
+                   : status === 'offline' ? 'Esperando directo'
+                   : 'Desconectado';
   msgEl.textContent = message || '';
 
-  if (status === 'connected') {
+  if (status === 'connected' || status === 'offline' || status === 'connecting') {
     btnConnect.style.display = 'none';
     btnDisconnect.style.display = 'inline-block';
   } else {
@@ -133,11 +158,12 @@ socket.on('disconnect', () => {
 
 // Connect / Disconnect Handlers
 kickConnectBtn.addEventListener('click', () => {
-  const user = kickInput.value.trim();
+  const user = kickInput.value.trim().replace(/^@/, '');
   if (!user) return alert('Por favor introduce el nombre de tu canal en Kick');
+  localStorage.setItem('streambridge_kick_user', user);
   updatePlatformUI('kick', 'connecting', 'Conectando con Kick...');
   socket.emit('channel:connect', { platform: 'kick', username: user });
-  showToast('Enviando solicitud de conexión...');
+  showToast('Guardado. Conectando con Kick...');
 });
 
 kickDisconnectBtn.addEventListener('click', () => {
@@ -146,11 +172,12 @@ kickDisconnectBtn.addEventListener('click', () => {
 });
 
 tiktokConnectBtn.addEventListener('click', () => {
-  const user = tiktokInput.value.trim();
+  const user = tiktokInput.value.trim().replace(/^@/, '');
   if (!user) return alert('Por favor introduce tu usuario de TikTok (@usuario)');
+  localStorage.setItem('streambridge_tiktok_user', user);
   updatePlatformUI('tiktok', 'connecting', 'Conectando con TikTok...');
   socket.emit('channel:connect', { platform: 'tiktok', username: user });
-  showToast('Enviando solicitud de conexión...');
+  showToast('Guardado. Iniciando monitor de TikTok...');
 });
 
 tiktokDisconnectBtn.addEventListener('click', () => {

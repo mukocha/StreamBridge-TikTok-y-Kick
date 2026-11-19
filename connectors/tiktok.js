@@ -290,6 +290,21 @@ class TikTokConnector extends EventEmitter {
     }
   }
 
+  async checkIsLive(username) {
+    const cleanUser = (username || '').trim().replace(/^@/, '');
+    if (!cleanUser) return { isLive: false };
+    try {
+      const conn = new TikTokLiveConnection(cleanUser, {
+        processInitialData: false,
+        fetchRoomInfoOnConnect: false
+      });
+      const data = await this._fetchRoomData(conn, cleanUser);
+      return data || { isLive: false };
+    } catch (_) {
+      return { isLive: false };
+    }
+  }
+
   async _fetchRoomData(connector, username) {
     try {
       const cleanUser = (username || '').trim().replace(/^@/, '');
