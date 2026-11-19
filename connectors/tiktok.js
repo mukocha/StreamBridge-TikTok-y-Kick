@@ -17,6 +17,17 @@ class TikTokConnector extends EventEmitter {
     this.username = null;
     this.isConnected = false;
     this.viewers = 0;
+    this.viewerPollInterval = null;
+  }
+
+  _updateViewers(count) {
+    const num = Number(count);
+    if (!isNaN(num) && num >= 0) {
+      if (this.viewers !== num) {
+        this.viewers = num;
+        this.emit('viewers', { platform: 'tiktok', viewers: this.viewers });
+      }
+    }
   }
 
   async connect(username) {
@@ -69,20 +80,31 @@ class TikTokConnector extends EventEmitter {
           message: `Conectado a TikTok Live (@${this.username})`
         });
         if (roomCheck && roomCheck.viewers !== undefined) {
-          this.viewers = roomCheck.viewers;
-          this.emit('viewers', { platform: 'tiktok', viewers: this.viewers });
+          this._updateViewers(roomCheck.viewers);
+        }
+        this._startViewerPolling();
+      });
+
+      // Actualización de espectadores en tiempo real de TikTok vía roomUser (data.total en proto v3)
+      this.connection.on('roomUser', (data) => {
+        if (!data) return;
+        const count = data.total ?? data.viewerCount ?? data.totalUser ?? data.userCount;
+        if (count !== undefined && count !== null) {
+          this._updateViewers(count);
         }
       });
 
-      // Actualización de espectadores en tiempo real de TikTok
-      this.connection.on('roomUser', (data) => {
-        if (data && data.viewerCount !== undefined) {
-          this.viewers = Number(data.viewerCount) || 0;
-          this.emit('viewers', { platform: 'tiktok', viewers: this.viewers });
+      // Actualización de espectadores en tiempo real de TikTok vía member (sin emitir alerta de chat)
+      this.connection.on('member', (data) => {
+        if (!data) return;
+        const count = data.memberCount ?? data.userCount;
+        if (count !== undefined && count !== null && Number(count) > 0) {
+          this._updateViewers(count);
         }
       });
 
       this.connection.on('disconnected', () => {
+        this._stopViewerPolling();
         this.isConnected = false;
         this.viewers = 0;
         this.emit('viewers', { platform: 'tiktok', viewers: 0 });
@@ -90,6 +112,7 @@ class TikTokConnector extends EventEmitter {
       });
 
       this.connection.on('streamEnd', () => {
+        this._stopViewerPolling();
         this.isConnected = false;
         this.viewers = 0;
         this.emit('viewers', { platform: 'tiktok', viewers: 0 });
@@ -267,7 +290,12 @@ class TikTokConnector extends EventEmitter {
       const liveRoom = roomData?.data?.liveRoom;
       if (liveRoom && liveRoom.status !== undefined) {
         const status = Number(liveRoom.status);
-        const viewers = Number(liveRoom.liveRoomStats?.userCount ?? liveRoom.user_count ?? 0) || 0;
+        const viewers = Number(
+          liveRoom.liveRoomStats?.userCount ??
+          liveRoom.user_count ??
+          liveRoom.liveRoomStats?.user_count ??
+          0
+        ) || 0;
         return {
           isLive: status === 2,
           status,
@@ -279,7 +307,29 @@ class TikTokConnector extends EventEmitter {
     return null;
   }
 
+  _startViewerPolling() {
+    this._stopViewerPolling();
+    const poll = async () => {
+      if (!this.isConnected || !this.connection) return;
+      try {
+        const data = await this._fetchRoomData(this.connection, this.username);
+        if (data && data.viewers !== undefined && data.viewers >= 0) {
+          this._updateViewers(data.viewers);
+        }
+      } catch (_) {}
+    };
+    this.viewerPollInterval = setInterval(poll, 15000);
+  }
+
+  _stopViewerPolling() {
+    if (this.viewerPollInterval) {
+      clearInterval(this.viewerPollInterval);
+      this.viewerPollInterval = null;
+    }
+  }
+
   disconnect() {
+    this._stopViewerPolling();
     if (this.connection) {
       try {
         this.connection.removeAllListeners();
